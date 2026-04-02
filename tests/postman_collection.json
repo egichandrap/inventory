@@ -1,0 +1,798 @@
+{
+	"info": {
+		"_postman_id": "jwt-ddd-clean-collection-v2",
+		"name": "JWT DDD Clean Architecture API",
+		"description": "Postman collection for testing JWT Token and Inventory Management API built with DDD and Clean Architecture principles using Go 1.26",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "noauth"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "inventoryId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/",
+					"host": ["{{baseUrl}}"],
+					"path": [""]
+				},
+				"description": "Get API service information and available endpoints"
+			},
+			"response": []
+		},
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Generate Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has access_token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"access_token\");",
+									"    pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
+									"});",
+									"",
+									"pm.test(\"Response has refresh_token\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"refresh_token\");",
+									"    pm.collectionVariables.set(\"refreshToken\", jsonData.data.refresh_token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"john_doe\",\n    \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/token/generate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "generate"]
+						},
+						"description": "Generate a new access token and refresh token pair"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"New access token received\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"access_token\");",
+									"    pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh_token\": \"{{refreshToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/token/refresh",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/token/validate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "validate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{accessToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/token/revoke",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "revoke"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Inventory CRUD",
+			"item": [
+				{
+					"name": "List Inventory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has items array\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"items\");",
+									"    pm.expect(jsonData.data).to.have.property(\"total\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory?limit=10&offset=0",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "sku",
+									"value": "",
+									"description": "Filter by SKU (optional)",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "",
+									"description": "Filter by name (optional)",
+									"disabled": true
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "Filter by location (optional)",
+									"disabled": true
+								}
+							]
+						},
+						"description": "List all inventory items with pagination and filtering"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Inventory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"pm.test(\"Response has inventory data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"id\");",
+									"    pm.expect(jsonData.data).to.have.property(\"sku\");",
+									"    pm.collectionVariables.set(\"inventoryId\", jsonData.data.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sku\": \"SKU-NEW-001\",\n    \"name\": \"New Product\",\n    \"description\": \"Product description\",\n    \"quantity\": 100,\n    \"unit\": \"unit\",\n    \"location\": \"Warehouse A\",\n    \"min_stock\": 10,\n    \"max_stock\": 500,\n    \"price\": 99.99\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "Create a new inventory item"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory By ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has inventory data\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"id\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}"]
+						},
+						"description": "Get a specific inventory item by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Inventory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"id\": \"{{inventoryId}}\",\n    \"sku\": \"SKU-NEW-001\",\n    \"name\": \"Updated Product Name\",\n    \"description\": \"Updated description\",\n    \"quantity\": 150,\n    \"unit\": \"unit\",\n    \"location\": \"Warehouse B\",\n    \"min_stock\": 15,\n    \"max_stock\": 600,\n    \"price\": 89.99\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}"]
+						},
+						"description": "Update an existing inventory item"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Inventory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}"]
+						},
+						"description": "Delete an inventory item"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Stock Quantity",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has quantity\", function () {",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property(\"quantity\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantity\": 200\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}/stock",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}", "stock"]
+						},
+						"description": "Update the stock quantity of an inventory item"
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Stock",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"adjustment\": -50\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}/stock/adjust",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}", "stock", "adjust"]
+						},
+						"description": "Adjust stock quantity by a positive or negative amount"
+					},
+					"response": []
+				}
+			],
+			"auth": {
+				"type": "bearer",
+				"bearer": [
+					{
+						"key": "token",
+						"value": "{{accessToken}}",
+						"type": "string"
+					}
+				]
+			},
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// This folder requires authentication",
+							"// Make sure to generate a token first from the Authentication folder"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Complete Workflow",
+			"item": [
+				{
+					"name": "1. Generate Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.collectionVariables.set(\"accessToken\", jsonData.data.access_token);",
+									"pm.collectionVariables.set(\"refreshToken\", jsonData.data.refresh_token);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"admin\",\n    \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/token/generate",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "generate"]
+						}
+					}
+				},
+				{
+					"name": "2. List Inventory (Protected)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "3. Create Inventory Item",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.collectionVariables.set(\"inventoryId\", jsonData.data.id);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sku\": \"SKU-WORKFLOW-001\",\n    \"name\": \"Workflow Test Product\",\n    \"quantity\": 50,\n    \"unit\": \"unit\",\n    \"price\": 49.99\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						}
+					}
+				},
+				{
+					"name": "4. Adjust Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"adjustment\": 25\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}/stock/adjust",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}", "stock", "adjust"]
+						}
+					}
+				},
+				{
+					"name": "5. Delete Inventory",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/{{inventoryId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "{{inventoryId}}"]
+						}
+					}
+				},
+				{
+					"name": "6. Revoke Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{accessToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/token/revoke",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "token", "revoke"]
+						}
+					}
+				}
+			],
+			"description": "Complete workflow: authenticate, perform CRUD operations, and revoke token"
+		},
+		{
+			"name": "4. Error Scenarios",
+			"item": [
+				{
+					"name": "Access Protected Endpoint Without Token",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "This should return 401 Unauthorized"
+					},
+					"response": []
+				},
+				{
+					"name": "Access Protected Endpoint With Invalid Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer invalid-token"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "This should return 401 Unauthorized"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Inventory With Missing Required Fields",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"quantity\": 100\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "This should return 400 Bad Request (missing sku, name, unit)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Non-Existent Inventory",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory/non-existent-id",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory", "non-existent-id"]
+						},
+						"description": "This should return 404 Not Found"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Duplicate SKU",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"sku\": \"SKU-001\",\n    \"name\": \"Duplicate SKU Test\",\n    \"quantity\": 10,\n    \"unit\": \"unit\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/inventory",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "inventory"]
+						},
+						"description": "This should return 409 Conflict if SKU-001 already exists"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
