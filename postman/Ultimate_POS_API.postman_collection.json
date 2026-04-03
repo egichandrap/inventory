@@ -299,6 +299,28 @@
 			"name": "2. User Management (Admin)",
 			"item": [
 				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newcashier\",\n  \"email\": \"newcashier@pos.local\",\n  \"password\": \"cashier123\",\n  \"full_name\": \"New Cashier User\",\n  \"role\": \"CASHIER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "List All Users",
 					"request": {
 						"method": "GET",

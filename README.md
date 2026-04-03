@@ -392,6 +392,7 @@ curl http://localhost:8080/
 #### Admin Only (SUPER_ADMIN / ADMIN)
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| `POST` | `/api/admin/users` | Create new user |
 | `GET` | `/api/admin/users` | List users |
 | `GET` | `/api/admin/users/{id}` | Get user detail |
 | `PUT` | `/api/admin/users/{id}` | Update user |

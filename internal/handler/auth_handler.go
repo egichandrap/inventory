@@ -153,6 +153,33 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	h.sendJSON(w, http.StatusOK, true, "Password berhasil diubah", nil)
 }
 
+// CreateUser creates a new user (admin only)
+func (h *AuthHandler) CreateUser(w http.ResponseWriter, r *http.Request) {
+	var req dto.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.sendError(w, errors.NewValidationError("request body tidak valid"))
+		return
+	}
+
+	// Validate required fields
+	if req.Username == "" || req.Email == "" || req.Password == "" || req.FullName == "" {
+		h.sendError(w, errors.NewValidationError("semua field harus diisi"))
+		return
+	}
+
+	if req.Role == "" {
+		req.Role = model.RoleCashier // Default role
+	}
+
+	response, err := h.authService.Register(r.Context(), req)
+	if err != nil {
+		h.sendError(w, err)
+		return
+	}
+
+	h.sendJSON(w, http.StatusCreated, true, "User berhasil dibuat", response)
+}
+
 // ListUsers returns paginated list of users (admin only)
 func (h *AuthHandler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// Get query params

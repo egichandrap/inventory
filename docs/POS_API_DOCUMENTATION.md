@@ -111,7 +111,25 @@ Authorization: Bearer <your_jwt_token>
 
 ## 2. User Management (Admin Only)
 
-### 2.1 List Users
+### 2.1 Create User
+**POST** `/admin/users`
+
+**Headers:** Authorization required (SUPER_ADMIN or ADMIN)
+
+**Request Body:**
+```json
+{
+  "username": "newcashier",
+  "email": "newcashier@pos.local",
+  "password": "cashier123",
+  "full_name": "New Cashier",
+  "role": "CASHIER"
+}
+```
+
+**Roles:** SUPER_ADMIN, ADMIN, CASHIER, VIEWER
+
+### 2.2 List Users
 **GET** `/admin/users`
 
 **Headers:** Authorization required (SUPER_ADMIN or ADMIN)
@@ -123,12 +141,12 @@ Authorization: Bearer <your_jwt_token>
 - `status` (ACTIVE, INACTIVE, SUSPENDED)
 - `search` (search by username, email, or full_name)
 
-### 2.2 Get User by ID
+### 2.3 Get User by ID
 **GET** `/admin/users/{id}`
 
 **Headers:** Authorization required (SUPER_ADMIN or ADMIN)
 
-### 2.3 Update User
+### 2.4 Update User
 **PUT** `/admin/users/{id}`
 
 **Headers:** Authorization required (SUPER_ADMIN or ADMIN)
@@ -143,7 +161,7 @@ Authorization: Bearer <your_jwt_token>
 }
 ```
 
-### 2.4 Delete User
+### 2.5 Delete User
 **DELETE** `/admin/users/{id}`
 
 **Headers:** Authorization required (SUPER_ADMIN or ADMIN)

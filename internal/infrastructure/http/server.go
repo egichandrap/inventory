@@ -86,6 +86,7 @@ func setupRoutes(
 	adminRouter.Use(authMiddleware.RequireRole("SUPER_ADMIN", "ADMIN"))
 	
 	adminRouter.HandleFunc("/users", authHandler.ListUsers).Methods(http.MethodGet)
+	adminRouter.HandleFunc("/users", authHandler.CreateUser).Methods(http.MethodPost)
 	adminRouter.HandleFunc("/users/{id}", authHandler.GetUserByID).Methods(http.MethodGet)
 	adminRouter.HandleFunc("/users/{id}", authHandler.UpdateUser).Methods(http.MethodPut)
 	adminRouter.HandleFunc("/users/{id}", authHandler.DeleteUser).Methods(http.MethodDelete)
