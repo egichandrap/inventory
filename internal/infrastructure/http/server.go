@@ -3,12 +3,15 @@ package http
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/gorilla/mux"
 
 	"github.com/example/jwt-ddd-clean/internal/domain/repository"
 	"github.com/example/jwt-ddd-clean/internal/domain/service"
@@ -22,6 +25,7 @@ import (
 // Server represents the HTTP server
 type Server struct {
 	httpServer *http.Server
+	router     *mux.Router
 	config     ServerConfig
 }
 
@@ -49,7 +53,62 @@ func DefaultServerConfig() ServerConfig {
 	}
 }
 
-// NewServer creates a new HTTP server
+// setupRoutes configures all API routes using gorilla/mux
+func setupRoutes(
+	r *mux.Router,
+	tokenHTTPHandler *TokenHTTPHandler,
+	inventoryHTTPHandler *inventoryhttp.InventoryHTTPHandler,
+	authMiddleware *httpmiddleware.AuthMiddleware,
+) {
+	// Public routes (no authentication required)
+	r.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
+	r.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
+	r.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
+	r.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
+	r.HandleFunc("/api/health", tokenHTTPHandler.Health).Methods(http.MethodGet)
+
+	// Protected routes (authentication required) - Inventory
+	inventoryRouter := r.PathPrefix("/api/inventory").Subrouter()
+	inventoryRouter.Use(authMiddleware.Authenticate)
+
+	inventoryRouter.HandleFunc("", inventoryHTTPHandler.ListInventory).Methods(http.MethodGet)
+	inventoryRouter.HandleFunc("", inventoryHTTPHandler.CreateInventory).Methods(http.MethodPost)
+	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.GetInventory).Methods(http.MethodGet)
+	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.UpdateInventory).Methods(http.MethodPut)
+	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.DeleteInventory).Methods(http.MethodDelete)
+	inventoryRouter.HandleFunc("/{id}/stock", inventoryHTTPHandler.UpdateStock).Methods(http.MethodPut)
+	inventoryRouter.HandleFunc("/{id}/stock/adjust", inventoryHTTPHandler.AdjustStock).Methods(http.MethodPost)
+
+	// Root endpoint - API info
+	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		response := map[string]interface{}{
+			"service": "jwt-ddd-clean",
+			"version": "1.0.0",
+			"endpoints": map[string][]string{
+				"public": {
+					"POST /api/token/generate",
+					"POST /api/token/refresh",
+					"POST /api/token/validate",
+					"POST /api/token/revoke",
+					"GET  /api/health",
+				},
+				"protected": {
+					"GET    /api/inventory",
+					"POST   /api/inventory",
+					"GET    /api/inventory/{id}",
+					"PUT    /api/inventory/{id}",
+					"DELETE /api/inventory/{id}",
+					"PUT    /api/inventory/{id}/stock",
+					"POST   /api/inventory/{id}/stock/adjust",
+				},
+			},
+		}
+		json.NewEncoder(w).Encode(response)
+	}).Methods(http.MethodGet)
+}
+
+// NewServer creates a new HTTP server with gorilla/mux
 func NewServer(config ServerConfig) *Server {
 	// Infrastructure layer - JWT
 	jwtProvider := infrastructurejwt.NewProvider(infrastructurejwt.Config{
@@ -58,7 +117,7 @@ func NewServer(config ServerConfig) *Server {
 		Algorithm: "HS256",
 	})
 
-	// Infrastructure layer - Repositories
+	// Infrastructure layer - Repositories (In-Memory)
 	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
 	var inventoryRepo repository.InventoryRepository = infrarepo.NewMemoryInventoryRepository()
 
@@ -82,69 +141,15 @@ func NewServer(config ServerConfig) *Server {
 	// Middleware
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
+	// Create mux router
+	r := mux.NewRouter()
+
 	// Setup routes
-	mux := http.NewServeMux()
-
-	// Public routes (no authentication required)
-	mux.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken)
-	mux.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken)
-	mux.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken)
-	mux.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken)
-	mux.HandleFunc("/api/health", tokenHTTPHandler.Health)
-
-	// Protected routes (authentication required)
-	// Inventory endpoints
-	inventoryMux := http.NewServeMux()
-	inventoryMux.HandleFunc("/api/inventory", inventoryHTTPHandler.ListInventory)
-	inventoryMux.HandleFunc("/api/inventory/", func(w http.ResponseWriter, r *http.Request) {
-		// Route based on method and path
-		switch r.Method {
-		case http.MethodGet:
-			// Check if it's a specific ID request or list with query params
-			if r.URL.Path == "/api/inventory/" || r.URL.Path == "/api/inventory" {
-				inventoryHTTPHandler.ListInventory(w, r)
-			} else {
-				// Check for stock adjustment endpoints
-				if len(r.URL.Path) > 12 && r.URL.Path[len(r.URL.Path)-7:] == "/stock" {
-					inventoryHTTPHandler.UpdateStock(w, r)
-				} else if len(r.URL.Path) > 12 && len(r.URL.Path) > 19 && r.URL.Path[len(r.URL.Path)-14:] == "/stock/adjust" {
-					inventoryHTTPHandler.AdjustStock(w, r)
-				} else {
-					inventoryHTTPHandler.GetInventory(w, r)
-				}
-			}
-		case http.MethodPut:
-			if len(r.URL.Path) > 12 && r.URL.Path[len(r.URL.Path)-7:] == "/stock" {
-				inventoryHTTPHandler.UpdateStock(w, r)
-			} else {
-				inventoryHTTPHandler.UpdateInventory(w, r)
-			}
-		case http.MethodPost:
-			if len(r.URL.Path) > 12 && len(r.URL.Path) > 19 && r.URL.Path[len(r.URL.Path)-14:] == "/stock/adjust" {
-				inventoryHTTPHandler.AdjustStock(w, r)
-			} else {
-				inventoryHTTPHandler.CreateInventory(w, r)
-			}
-		case http.MethodDelete:
-			inventoryHTTPHandler.DeleteInventory(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Apply authentication middleware to inventory routes
-	mux.Handle("/api/inventory", authMiddleware.Authenticate(inventoryMux))
-	mux.Handle("/api/inventory/", authMiddleware.Authenticate(inventoryMux))
-
-	// Root endpoint
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"service":"jwt-ddd-clean","version":"1.0.0","endpoints":{"public":["POST /api/token/generate","POST /api/token/refresh","POST /api/token/validate","POST /api/token/revoke","GET /api/health"],"protected":["GET /api/inventory","POST /api/inventory","PUT /api/inventory/{id}","DELETE /api/inventory/{id}","PUT /api/inventory/{id}/stock","POST /api/inventory/{id}/stock/adjust"]}}`)
-	})
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,
-		Handler:      mux,
+		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -152,11 +157,12 @@ func NewServer(config ServerConfig) *Server {
 
 	return &Server{
 		httpServer: server,
+		router:     r,
 		config:     config,
 	}
 }
 
-// NewServerWithDatabase creates a new HTTP server with database connection
+// NewServerWithDatabase creates a new HTTP server with PostgreSQL database connection using gorilla/mux
 func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	// Infrastructure layer - JWT
 	jwtProvider := infrastructurejwt.NewProvider(infrastructurejwt.Config{
@@ -165,9 +171,9 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 		Algorithm: "HS256",
 	})
 
-	// Infrastructure layer - Repositories
+	// Infrastructure layer - Repositories (PostgreSQL)
 	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
-	var inventoryRepo repository.InventoryRepository = infrarepo.NewSQLiteInventoryRepository(db)
+	var inventoryRepo repository.InventoryRepository = infrarepo.NewPostgresInventoryRepository(db)
 
 	// Domain layer - Services
 	tokenService := service.NewTokenService(
@@ -189,63 +195,15 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	// Middleware
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
+	// Create mux router
+	r := mux.NewRouter()
+
 	// Setup routes
-	mux := http.NewServeMux()
-
-	// Public routes (no authentication required)
-	mux.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken)
-	mux.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken)
-	mux.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken)
-	mux.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken)
-	mux.HandleFunc("/api/health", tokenHTTPHandler.Health)
-
-	// Protected routes (authentication required)
-	inventoryMux := http.NewServeMux()
-	inventoryMux.HandleFunc("/api/inventory", inventoryHTTPHandler.ListInventory)
-	inventoryMux.HandleFunc("/api/inventory/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			if r.URL.Path == "/api/inventory/" || r.URL.Path == "/api/inventory" {
-				inventoryHTTPHandler.ListInventory(w, r)
-			} else if len(r.URL.Path) > 19 && r.URL.Path[len(r.URL.Path)-14:] == "/stock/adjust" {
-				inventoryHTTPHandler.AdjustStock(w, r)
-			} else if len(r.URL.Path) > 12 && r.URL.Path[len(r.URL.Path)-7:] == "/stock" {
-				inventoryHTTPHandler.UpdateStock(w, r)
-			} else {
-				inventoryHTTPHandler.GetInventory(w, r)
-			}
-		case http.MethodPut:
-			if len(r.URL.Path) > 12 && r.URL.Path[len(r.URL.Path)-7:] == "/stock" {
-				inventoryHTTPHandler.UpdateStock(w, r)
-			} else {
-				inventoryHTTPHandler.UpdateInventory(w, r)
-			}
-		case http.MethodPost:
-			if len(r.URL.Path) > 12 && len(r.URL.Path) > 19 && r.URL.Path[len(r.URL.Path)-14:] == "/stock/adjust" {
-				inventoryHTTPHandler.AdjustStock(w, r)
-			} else {
-				inventoryHTTPHandler.CreateInventory(w, r)
-			}
-		case http.MethodDelete:
-			inventoryHTTPHandler.DeleteInventory(w, r)
-		default:
-			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		}
-	})
-
-	// Apply authentication middleware to inventory routes
-	mux.Handle("/api/inventory", authMiddleware.Authenticate(inventoryMux))
-	mux.Handle("/api/inventory/", authMiddleware.Authenticate(inventoryMux))
-
-	// Root endpoint
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, `{"service":"jwt-ddd-clean","version":"1.0.0","endpoints":{"public":["POST /api/token/generate","POST /api/token/refresh","POST /api/token/validate","POST /api/token/revoke","GET /api/health"],"protected":["GET /api/inventory","POST /api/inventory","PUT /api/inventory/{id}","DELETE /api/inventory/{id}","PUT /api/inventory/{id}/stock","POST /api/inventory/{id}/stock/adjust"]}}`)
-	})
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,
-		Handler:      mux,
+		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
@@ -253,6 +211,7 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 
 	return &Server{
 		httpServer: server,
+		router:     r,
 		config:     config,
 	}
 }

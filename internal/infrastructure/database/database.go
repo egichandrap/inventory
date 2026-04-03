@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
-// Config holds database configuration
+// Config holds PostgreSQL database configuration
 type Config struct {
-	Driver         string
-	DataSourceName string
-	MaxOpenConns   int
-	MaxIdleConns   int
+	Driver          string
+	DSN             string
+	MaxOpenConns    int
+	MaxIdleConns    int
 	ConnMaxLifetime time.Duration
 }
 
@@ -23,9 +23,11 @@ type DB struct {
 	config Config
 }
 
-// New creates a new database connection
+// New creates a new PostgreSQL database connection
 func New(config Config) (*DB, error) {
-	db, err := sql.Open(config.Driver, config.DataSourceName)
+	config.Driver = "postgres"
+
+	db, err := sql.Open(config.Driver, config.DSN)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -46,11 +48,11 @@ func New(config Config) (*DB, error) {
 	}, nil
 }
 
-// DefaultConfig returns default database configuration for SQLite
+// DefaultConfig returns default PostgreSQL configuration
 func DefaultConfig() Config {
 	return Config{
-		Driver:          "sqlite3",
-		DataSourceName:  "./data/inventory.db",
+		Driver:          "postgres",
+		DSN:             "host=localhost port=5432 user=postgres password=postgres dbname=jwt_ddd sslmode=disable",
 		MaxOpenConns:    25,
 		MaxIdleConns:    5,
 		ConnMaxLifetime: 5 * time.Minute,
@@ -60,4 +62,9 @@ func DefaultConfig() Config {
 // Close closes the database connection
 func (db *DB) Close() error {
 	return db.DB.Close()
+}
+
+// Driver returns the database driver name
+func (db *DB) Driver() string {
+	return db.config.Driver
 }

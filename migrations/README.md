@@ -4,7 +4,21 @@ Database migrations for the JWT DDD Clean Architecture project.
 
 ## Running Migrations
 
-### Using golang-migrate
+### Automatic (Recommended)
+
+The application automatically runs migrations on startup when using the database flag:
+
+```bash
+# Start server with database (auto-runs migrations)
+./jwt-app -server -db
+
+# Start server with in-memory repositories (no database, no migrations)
+./jwt-app -server -db=false
+```
+
+Migrations are executed in alphabetical order based on the filename. The migration files are located in `internal/infrastructure/database/migrations/`.
+
+### Manual Using golang-migrate CLI
 
 Install golang-migrate:
 ```bash

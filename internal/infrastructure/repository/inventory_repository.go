@@ -10,23 +10,23 @@ import (
 	"github.com/example/jwt-ddd-clean/internal/domain/repository"
 )
 
-// SQLiteInventoryRepository implements InventoryRepository using SQLite
-type SQLiteInventoryRepository struct {
+// PostgresInventoryRepository implements InventoryRepository using PostgreSQL
+type PostgresInventoryRepository struct {
 	db *sql.DB
 }
 
-// NewSQLiteInventoryRepository creates a new SQLite inventory repository
-func NewSQLiteInventoryRepository(db *sql.DB) repository.InventoryRepository {
-	return &SQLiteInventoryRepository{
+// NewPostgresInventoryRepository creates a new PostgreSQL inventory repository
+func NewPostgresInventoryRepository(db *sql.DB) repository.InventoryRepository {
+	return &PostgresInventoryRepository{
 		db: db,
 	}
 }
 
 // Create creates a new inventory item
-func (r *SQLiteInventoryRepository) Create(ctx context.Context, inventory *model.Inventory) error {
+func (r *PostgresInventoryRepository) Create(ctx context.Context, inventory *model.Inventory) error {
 	query := `
 		INSERT INTO inventories (id, sku, name, description, quantity, unit, location, min_stock, max_stock, price, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 
 	now := time.Now()
@@ -52,11 +52,11 @@ func (r *SQLiteInventoryRepository) Create(ctx context.Context, inventory *model
 }
 
 // GetByID retrieves an inventory item by its ID
-func (r *SQLiteInventoryRepository) GetByID(ctx context.Context, id string) (*model.Inventory, error) {
+func (r *PostgresInventoryRepository) GetByID(ctx context.Context, id string) (*model.Inventory, error) {
 	query := `
 		SELECT id, sku, name, description, quantity, unit, location, min_stock, max_stock, price, created_at, updated_at
 		FROM inventories
-		WHERE id = ?
+		WHERE id = $1
 	`
 
 	inv := &model.Inventory{}
@@ -86,11 +86,11 @@ func (r *SQLiteInventoryRepository) GetByID(ctx context.Context, id string) (*mo
 }
 
 // GetBySKU retrieves an inventory item by its SKU
-func (r *SQLiteInventoryRepository) GetBySKU(ctx context.Context, sku string) (*model.Inventory, error) {
+func (r *PostgresInventoryRepository) GetBySKU(ctx context.Context, sku string) (*model.Inventory, error) {
 	query := `
 		SELECT id, sku, name, description, quantity, unit, location, min_stock, max_stock, price, created_at, updated_at
 		FROM inventories
-		WHERE sku = ?
+		WHERE sku = $1
 	`
 
 	inv := &model.Inventory{}
@@ -120,11 +120,11 @@ func (r *SQLiteInventoryRepository) GetBySKU(ctx context.Context, sku string) (*
 }
 
 // Update updates an existing inventory item
-func (r *SQLiteInventoryRepository) Update(ctx context.Context, inventory *model.Inventory) error {
+func (r *PostgresInventoryRepository) Update(ctx context.Context, inventory *model.Inventory) error {
 	query := `
 		UPDATE inventories
-		SET sku = ?, name = ?, description = ?, quantity = ?, unit = ?, location = ?, min_stock = ?, max_stock = ?, price = ?, updated_at = ?
-		WHERE id = ?
+		SET sku = $1, name = $2, description = $3, quantity = $4, unit = $5, location = $6, min_stock = $7, max_stock = $8, price = $9, updated_at = $10
+		WHERE id = $11
 	`
 
 	inventory.UpdatedAt = time.Now()
@@ -147,14 +147,14 @@ func (r *SQLiteInventoryRepository) Update(ctx context.Context, inventory *model
 }
 
 // Delete removes an inventory item
-func (r *SQLiteInventoryRepository) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM inventories WHERE id = ?`
+func (r *PostgresInventoryRepository) Delete(ctx context.Context, id string) error {
+	query := `DELETE FROM inventories WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, id)
 	return err
 }
 
 // List retrieves a list of inventory items with optional filtering
-func (r *SQLiteInventoryRepository) List(ctx context.Context, filter *model.InventoryFilter) ([]*model.Inventory, error) {
+func (r *PostgresInventoryRepository) List(ctx context.Context, filter *model.InventoryFilter) ([]*model.Inventory, error) {
 	query := `
 		SELECT id, sku, name, description, quantity, unit, location, min_stock, max_stock, price, created_at, updated_at
 		FROM inventories
@@ -162,38 +162,45 @@ func (r *SQLiteInventoryRepository) List(ctx context.Context, filter *model.Inve
 	`
 
 	args := []interface{}{}
+	argCount := 1
 
 	if filter != nil {
 		if filter.SKU != nil {
-			query += " AND sku LIKE ?"
+			query += " AND sku LIKE $" + string(rune('0'+argCount))
 			args = append(args, "%"+*filter.SKU+"%")
+			argCount++
 		}
 		if filter.Name != nil {
-			query += " AND name LIKE ?"
+			query += " AND name LIKE $" + string(rune('0'+argCount))
 			args = append(args, "%"+*filter.Name+"%")
+			argCount++
 		}
 		if filter.Location != nil {
-			query += " AND location = ?"
+			query += " AND location = $" + string(rune('0'+argCount))
 			args = append(args, *filter.Location)
+			argCount++
 		}
 		if filter.MinQty != nil {
-			query += " AND quantity >= ?"
+			query += " AND quantity >= $" + string(rune('0'+argCount))
 			args = append(args, *filter.MinQty)
+			argCount++
 		}
 		if filter.MaxQty != nil {
-			query += " AND quantity <= ?"
+			query += " AND quantity <= $" + string(rune('0'+argCount))
 			args = append(args, *filter.MaxQty)
+			argCount++
 		}
 	}
 
 	query += " ORDER BY created_at DESC"
 
 	if filter != nil && filter.Limit > 0 {
-		query += " LIMIT ?"
+		query += " LIMIT $" + string(rune('0'+argCount))
 		args = append(args, filter.Limit)
+		argCount++
 
 		if filter.Offset > 0 {
-			query += " OFFSET ?"
+			query += " OFFSET $" + string(rune('0'+argCount))
 			args = append(args, filter.Offset)
 		}
 	}
@@ -231,31 +238,37 @@ func (r *SQLiteInventoryRepository) List(ctx context.Context, filter *model.Inve
 }
 
 // Count returns the total count of inventory items
-func (r *SQLiteInventoryRepository) Count(ctx context.Context, filter *model.InventoryFilter) (int64, error) {
+func (r *PostgresInventoryRepository) Count(ctx context.Context, filter *model.InventoryFilter) (int64, error) {
 	query := `SELECT COUNT(*) FROM inventories WHERE 1=1`
 
 	args := []interface{}{}
+	argCount := 1
 
 	if filter != nil {
 		if filter.SKU != nil {
-			query += " AND sku LIKE ?"
+			query += " AND sku LIKE $" + string(rune('0'+argCount))
 			args = append(args, "%"+*filter.SKU+"%")
+			argCount++
 		}
 		if filter.Name != nil {
-			query += " AND name LIKE ?"
+			query += " AND name LIKE $" + string(rune('0'+argCount))
 			args = append(args, "%"+*filter.Name+"%")
+			argCount++
 		}
 		if filter.Location != nil {
-			query += " AND location = ?"
+			query += " AND location = $" + string(rune('0'+argCount))
 			args = append(args, *filter.Location)
+			argCount++
 		}
 		if filter.MinQty != nil {
-			query += " AND quantity >= ?"
+			query += " AND quantity >= $" + string(rune('0'+argCount))
 			args = append(args, *filter.MinQty)
+			argCount++
 		}
 		if filter.MaxQty != nil {
-			query += " AND quantity <= ?"
+			query += " AND quantity <= $" + string(rune('0'+argCount))
 			args = append(args, *filter.MaxQty)
+			argCount++
 		}
 	}
 
@@ -265,19 +278,19 @@ func (r *SQLiteInventoryRepository) Count(ctx context.Context, filter *model.Inv
 }
 
 // UpdateQuantity updates the quantity of an inventory item
-func (r *SQLiteInventoryRepository) UpdateQuantity(ctx context.Context, id string, quantity int) error {
-	query := `UPDATE inventories SET quantity = ?, updated_at = ? WHERE id = ?`
+func (r *PostgresInventoryRepository) UpdateQuantity(ctx context.Context, id string, quantity int) error {
+	query := `UPDATE inventories SET quantity = $1, updated_at = $2 WHERE id = $3`
 	_, err := r.db.ExecContext(ctx, query, quantity, time.Now(), id)
 	return err
 }
 
 // ExistsBySKU checks if an inventory item with the given SKU exists
-func (r *SQLiteInventoryRepository) ExistsBySKU(ctx context.Context, sku string, excludeID string) (bool, error) {
-	query := `SELECT EXISTS(SELECT 1 FROM inventories WHERE sku = ?`
+func (r *PostgresInventoryRepository) ExistsBySKU(ctx context.Context, sku string, excludeID string) (bool, error) {
+	query := `SELECT EXISTS(SELECT 1 FROM inventories WHERE sku = $1`
 	args := []interface{}{sku}
 
 	if excludeID != "" {
-		query += " AND id != ?"
+		query += " AND id != $2"
 		args = append(args, excludeID)
 	}
 	query += ")"
@@ -285,6 +298,15 @@ func (r *SQLiteInventoryRepository) ExistsBySKU(ctx context.Context, sku string,
 	var exists bool
 	err := r.db.QueryRowContext(ctx, query, args...).Scan(&exists)
 	return exists, err
+}
+
+// Helper function to build parameterized query placeholders for PostgreSQL
+func buildPlaceholders(start int, count int) []string {
+	placeholders := make([]string, count)
+	for i := 0; i < count; i++ {
+		placeholders[i] = "$" + string(rune('0'+start+i))
+	}
+	return placeholders
 }
 
 // MemoryInventoryRepository is an in-memory implementation for testing
