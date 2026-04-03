@@ -21,6 +21,7 @@ type TokenService struct {
 // JWTProvider defines the interface for JWT operations
 type JWTProvider interface {
 	GenerateToken(claims *model.TokenClaims, expiresAt time.Time) (string, error)
+	GenerateTokenWithDuration(userID, username string, role model.UserRole, expiration time.Duration) (string, error)
 	ValidateToken(token string) (*model.TokenClaims, error)
 	GetExpiration(token string) (time.Time, error)
 }
@@ -47,7 +48,7 @@ func (s *TokenService) GenerateTokens(ctx context.Context, user *model.User) (*m
 	claims := &model.TokenClaims{
 		UserID:   user.ID,
 		Username: user.Username,
-		Role:     user.Role,
+		Role:     string(user.Role),
 	}
 
 	// Generate access token
@@ -127,8 +128,9 @@ func (s *TokenService) RefreshToken(ctx context.Context, refreshToken string) (*
 		return nil, apperrors.ErrRevokedTokenErr
 	}
 
-	// Create user from claims
-	user := model.NewUser(claims.UserID, claims.Username, "", claims.Role)
+	// Create user from claims (we don't need full user object here, just use empty role)
+	user := model.NewUser(claims.UserID, claims.Username, "", "")
+	user.ID = claims.UserID
 
 	// Blacklist the old refresh token
 	expiration, _ := s.jwtProvider.GetExpiration(refreshToken)

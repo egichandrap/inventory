@@ -58,49 +58,113 @@ func setupRoutes(
 	r *mux.Router,
 	tokenHTTPHandler *TokenHTTPHandler,
 	inventoryHTTPHandler *inventoryhttp.InventoryHTTPHandler,
+	authHandler *handler.AuthHandler,
+	posHandler *handler.POSHandler,
 	authMiddleware *httpmiddleware.AuthMiddleware,
 ) {
 	// Public routes (no authentication required)
+	r.HandleFunc("/api/auth/login", authHandler.Login).Methods(http.MethodPost)
+	r.HandleFunc("/api/auth/register", authHandler.Register).Methods(http.MethodPost)
+	r.HandleFunc("/api/auth/refresh", authHandler.RefreshToken).Methods(http.MethodPost)
 	r.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
 	r.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
 	r.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
 	r.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
 	r.HandleFunc("/api/health", tokenHTTPHandler.Health).Methods(http.MethodGet)
 
-	// Protected routes (authentication required) - Inventory
-	inventoryRouter := r.PathPrefix("/api/inventory").Subrouter()
-	inventoryRouter.Use(authMiddleware.Authenticate)
+	// Protected routes (authentication required)
+	protectedRouter := r.PathPrefix("/api").Subrouter()
+	protectedRouter.Use(authMiddleware.Authenticate)
 
+	// Auth routes (require authentication)
+	protectedRouter.HandleFunc("/auth/logout", authHandler.Logout).Methods(http.MethodPost)
+	protectedRouter.HandleFunc("/auth/me", authHandler.GetMe).Methods(http.MethodGet)
+	protectedRouter.HandleFunc("/auth/change-password", authHandler.ChangePassword).Methods(http.MethodPost)
+
+	// Admin routes (require admin role)
+	adminRouter := protectedRouter.PathPrefix("/admin").Subrouter()
+	adminRouter.Use(authMiddleware.RequireRole("SUPER_ADMIN", "ADMIN"))
+	
+	adminRouter.HandleFunc("/users", authHandler.ListUsers).Methods(http.MethodGet)
+	adminRouter.HandleFunc("/users/{id}", authHandler.GetUserByID).Methods(http.MethodGet)
+	adminRouter.HandleFunc("/users/{id}", authHandler.UpdateUser).Methods(http.MethodPut)
+	adminRouter.HandleFunc("/users/{id}", authHandler.DeleteUser).Methods(http.MethodDelete)
+
+	// Inventory routes (require authentication, admin for write operations)
+	inventoryRouter := protectedRouter.PathPrefix("/inventory").Subrouter()
+	
+	// Read operations - any authenticated user can read
 	inventoryRouter.HandleFunc("", inventoryHTTPHandler.ListInventory).Methods(http.MethodGet)
-	inventoryRouter.HandleFunc("", inventoryHTTPHandler.CreateInventory).Methods(http.MethodPost)
 	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.GetInventory).Methods(http.MethodGet)
+	
+	// Write operations - only admin/superadmin (handled in handler with context check)
+	inventoryRouter.HandleFunc("", inventoryHTTPHandler.CreateInventory).Methods(http.MethodPost)
 	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.UpdateInventory).Methods(http.MethodPut)
 	inventoryRouter.HandleFunc("/{id}", inventoryHTTPHandler.DeleteInventory).Methods(http.MethodDelete)
 	inventoryRouter.HandleFunc("/{id}/stock", inventoryHTTPHandler.UpdateStock).Methods(http.MethodPut)
 	inventoryRouter.HandleFunc("/{id}/stock/adjust", inventoryHTTPHandler.AdjustStock).Methods(http.MethodPost)
 
+	// POS routes (require authentication)
+	posRouter := protectedRouter.PathPrefix("/pos").Subrouter()
+	
+	// Cart routes
+	posRouter.HandleFunc("/cart", posHandler.CreateCart).Methods(http.MethodPost)
+	posRouter.HandleFunc("/cart/my", posHandler.GetOrCreateCart).Methods(http.MethodGet)
+	posRouter.HandleFunc("/cart/{id}", posHandler.GetCart).Methods(http.MethodGet)
+	posRouter.HandleFunc("/cart/{id}/items", posHandler.AddToCart).Methods(http.MethodPost)
+	posRouter.HandleFunc("/cart/{id}/items", posHandler.UpdateCartItemQuantity).Methods(http.MethodPut)
+	posRouter.HandleFunc("/cart/{id}/items", posHandler.RemoveFromCart).Methods(http.MethodDelete)
+	posRouter.HandleFunc("/cart/{id}/clear", posHandler.ClearCart).Methods(http.MethodPost)
+	posRouter.HandleFunc("/cart/{id}", posHandler.DeleteCart).Methods(http.MethodDelete)
+	
+	// Checkout & Transaction routes
+	posRouter.HandleFunc("/checkout/{id}", posHandler.Checkout).Methods(http.MethodPost)
+	posRouter.HandleFunc("/transactions", posHandler.ListTransactions).Methods(http.MethodGet)
+	posRouter.HandleFunc("/transactions/{id}", posHandler.GetTransaction).Methods(http.MethodGet)
+	posRouter.HandleFunc("/transactions/{id}/cancel", posHandler.CancelTransaction).Methods(http.MethodPost)
+	
+	// Sales summary
+	posRouter.HandleFunc("/sales/today", posHandler.GetTodaySales).Methods(http.MethodGet)
+
 	// Root endpoint - API info
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
-			"service": "jwt-ddd-clean",
-			"version": "1.0.0",
+			"service": "jwt-ddd-clean-pos",
+			"version": "2.0.0",
 			"endpoints": map[string][]string{
 				"public": {
-					"POST /api/token/generate",
-					"POST /api/token/refresh",
-					"POST /api/token/validate",
-					"POST /api/token/revoke",
+					"POST /api/auth/login",
+					"POST /api/auth/register",
+					"POST /api/auth/refresh",
 					"GET  /api/health",
 				},
 				"protected": {
+					"POST   /api/auth/logout",
+					"GET    /api/auth/me",
+					"POST   /api/auth/change-password",
 					"GET    /api/inventory",
 					"POST   /api/inventory",
 					"GET    /api/inventory/{id}",
 					"PUT    /api/inventory/{id}",
 					"DELETE /api/inventory/{id}",
-					"PUT    /api/inventory/{id}/stock",
-					"POST   /api/inventory/{id}/stock/adjust",
+					"POST   /api/pos/cart",
+					"GET    /api/pos/cart/my",
+					"GET    /api/pos/cart/{id}",
+					"POST   /api/pos/cart/{id}/items",
+					"PUT    /api/pos/cart/{id}/items",
+					"DELETE /api/pos/cart/{id}/items",
+					"POST   /api/pos/checkout/{id}",
+					"GET    /api/pos/transactions",
+					"GET    /api/pos/transactions/{id}",
+					"POST   /api/pos/transactions/{id}/cancel",
+					"GET    /api/pos/sales/today",
+				},
+				"admin_only": {
+					"GET    /api/admin/users",
+					"GET    /api/admin/users/{id}",
+					"PUT    /api/admin/users/{id}",
+					"DELETE /api/admin/users/{id}",
 				},
 			},
 		}
@@ -120,6 +184,9 @@ func NewServer(config ServerConfig) *Server {
 	// Infrastructure layer - Repositories (In-Memory)
 	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
 	var inventoryRepo repository.InventoryRepository = infrarepo.NewMemoryInventoryRepository()
+	var userRepo repository.UserRepository = infrarepo.NewMemoryUserRepository()
+	var cartRepo repository.CartRepository = infrarepo.NewMemoryCartRepository()
+	var transactionRepo repository.TransactionRepository = infrarepo.NewMemoryTransactionRepository()
 
 	// Domain layer - Services
 	tokenService := service.NewTokenService(
@@ -130,6 +197,8 @@ func NewServer(config ServerConfig) *Server {
 	)
 
 	inventoryService := service.NewInventoryService(inventoryRepo)
+	authService := service.NewAuthService(userRepo, tokenRepo, jwtProvider)
+	posService := service.NewPOSService(cartRepo, transactionRepo, inventoryRepo)
 
 	// Handler layer - Token
 	tokenHandler := handler.NewTokenHandler(tokenService, &handler.UserService{})
@@ -138,6 +207,12 @@ func NewServer(config ServerConfig) *Server {
 	// Handler layer - Inventory
 	inventoryHTTPHandler := inventoryhttp.NewInventoryHTTPHandler(inventoryService)
 
+	// Handler layer - Auth
+	authHandler := handler.NewAuthHandler(authService)
+
+	// Handler layer - POS
+	posHandler := handler.NewPOSHandler(posService)
+
 	// Middleware
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
@@ -145,7 +220,7 @@ func NewServer(config ServerConfig) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,
@@ -174,6 +249,9 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	// Infrastructure layer - Repositories (PostgreSQL)
 	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
 	var inventoryRepo repository.InventoryRepository = infrarepo.NewPostgresInventoryRepository(db)
+	var userRepo repository.UserRepository = infrarepo.NewPostgresUserRepository(db)
+	var cartRepo repository.CartRepository = infrarepo.NewMemoryCartRepository() // TODO: Implement PostgreSQL cart repository
+	var transactionRepo repository.TransactionRepository = infrarepo.NewMemoryTransactionRepository() // TODO: Implement PostgreSQL transaction repository
 
 	// Domain layer - Services
 	tokenService := service.NewTokenService(
@@ -184,6 +262,8 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	)
 
 	inventoryService := service.NewInventoryService(inventoryRepo)
+	authService := service.NewAuthService(userRepo, tokenRepo, jwtProvider)
+	posService := service.NewPOSService(cartRepo, transactionRepo, inventoryRepo)
 
 	// Handler layer - Token
 	tokenHandler := handler.NewTokenHandler(tokenService, &handler.UserService{})
@@ -192,6 +272,12 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	// Handler layer - Inventory
 	inventoryHTTPHandler := inventoryhttp.NewInventoryHTTPHandler(inventoryService)
 
+	// Handler layer - Auth
+	authHandler := handler.NewAuthHandler(authService)
+
+	// Handler layer - POS
+	posHandler := handler.NewPOSHandler(posService)
+
 	// Middleware
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
@@ -199,7 +285,7 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,

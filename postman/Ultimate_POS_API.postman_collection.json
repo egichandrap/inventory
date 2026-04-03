@@ -1,0 +1,870 @@
+{
+	"info": {
+		"name": "Ultimate POS System API",
+		"description": "Complete Postman Collection for Ultimate POS System with JWT Authentication, Role-Based Access Control, and Full POS Functionality",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"version": "2.0.0"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080/api",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "cart_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "transaction_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "inventory_id",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{access_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Login as Super Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"    pm.collectionVariables.set('user_id', jsonData.data.user.id);",
+									"}",
+									"pm.test('Status code is 200', function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Login as Super Admin to get JWT tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Login as Admin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login as Cashier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"cashier\",\n  \"password\": \"cashier123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/login",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "login"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Register New User",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"cashier2\",\n  \"email\": \"cashier2@pos.local\",\n  \"password\": \"cashier123\",\n  \"full_name\": \"Cashier Two\",\n  \"role\": \"CASHIER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Logout",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "logout"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "me"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"old_password\": \"admin123\",\n  \"new_password\": \"newpass123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/change-password",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "change-password"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["auth", "refresh"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. User Management (Admin)",
+			"item": [
+				{
+					"name": "List All Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "role",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", "{{user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"updated@pos.local\",\n  \"full_name\": \"Updated Name\",\n  \"status\": \"ACTIVE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", "{{user_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["admin", "users", "{{user_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Inventory Management",
+			"item": [
+				{
+					"name": "List Inventory",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/inventory?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "sku",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "name",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Inventory",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('inventory_id', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"PROD-001\",\n  \"name\": \"Laptop ASUS VivoBook\",\n  \"description\": \"Laptop gaming dengan spesifikasi tinggi\",\n  \"quantity\": 50,\n  \"unit\": \"pcs\",\n  \"location\": \"Warehouse A\",\n  \"min_stock\": 10,\n  \"max_stock\": 100,\n  \"price\": 8500000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory",
+							"host": ["{{base_url}}"],
+							"path": ["inventory"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Inventory by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Inventory",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated description\",\n  \"price\": 9000000\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Inventory",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Stock",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 75\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_id}}/stock",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_id}}", "stock"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Adjust Stock",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"amount\": 10\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/inventory/{{inventory_id}}/stock/adjust",
+							"host": ["{{base_url}}"],
+							"path": ["inventory", "{{inventory_id}}", "stock", "adjust"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. POS - Cart",
+			"item": [
+				{
+					"name": "Create Cart",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('cart_id', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"customer_name\": \"John Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pos/cart",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Cart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/cart/my",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "my"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Cart by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Cart",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"{{inventory_id}}\",\n  \"quantity\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}", "items"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Cart Item Quantity",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"{{inventory_id}}\",\n  \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}", "items"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"{{inventory_id}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}", "items"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Clear Cart",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}/clear",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}", "clear"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Cart",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/cart/{{cart_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "cart", "{{cart_id}}"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "5. POS - Checkout & Transactions",
+			"item": [
+				{
+					"name": "Checkout (CASH)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('transaction_id', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payment_method\": \"CASH\",\n  \"payment_amount\": 10000000,\n  \"customer_name\": \"John Doe\",\n  \"notes\": \"Please wrap the gift\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/pos/checkout/{{cart_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "checkout", "{{cart_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "List Transactions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/transactions?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "transactions"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "payment_method",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "search",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Transaction by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/transactions/{{transaction_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "transactions", "{{transaction_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Transaction",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/transactions/{{transaction_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "transactions", "{{transaction_id}}", "cancel"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Today's Sales Summary",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/pos/sales/today",
+							"host": ["{{base_url}}"],
+							"path": ["pos", "sales", "today"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "6. Health & Info",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/health",
+							"host": ["{{base_url}}"],
+							"path": ["health"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "API Info",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS tokens (
     user_id TEXT NOT NULL,
     token TEXT NOT NULL,
     token_type TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on user_id for faster lookups
@@ -19,8 +19,8 @@ CREATE INDEX IF NOT EXISTS idx_tokens_token_type ON tokens(token_type);
 CREATE TABLE IF NOT EXISTS token_blacklist (
     id TEXT PRIMARY KEY,
     token TEXT NOT NULL UNIQUE,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Create index on expires_at for cleanup

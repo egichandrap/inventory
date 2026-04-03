@@ -286,17 +286,53 @@ var (
 
 // Helper functions
 
-// NewValidationError creates a validation error with field details
-func NewValidationError(field, reason string) *AppError {
-	return New(ErrInvalidField, fmt.Sprintf("Invalid %s: %s", field, reason), http.StatusBadRequest)
+// NewValidationError creates a validation error with message
+func NewValidationError(message string, args ...interface{}) *AppError {
+	if len(args) > 0 {
+		message = fmt.Sprintf(message, args...)
+	}
+	return &AppError{
+		Code:       ErrValidation,
+		Message:    message,
+		HTTPStatus: http.StatusBadRequest,
+	}
 }
 
 // NewNotFoundError creates a not found error with resource type
-func NewNotFoundError(resource, id string) *AppError {
-	return New(ErrNotFound, fmt.Sprintf("%s with ID %s not found", resource, id), http.StatusNotFound)
+func NewNotFoundError(resource, field string, value string) *AppError {
+	return &AppError{
+		Code:       ErrNotFound,
+		Message:    fmt.Sprintf("%s dengan %s '%s' tidak ditemukan", resource, field, value),
+		HTTPStatus: http.StatusNotFound,
+	}
 }
 
 // NewInternalError creates an internal error with details
-func NewInternalError(operation string, err error) *AppError {
-	return Wrap(err, ErrInternal, fmt.Sprintf("Failed to %s", operation), http.StatusInternalServerError)
+func NewInternalError(message string, args ...interface{}) *AppError {
+	if len(args) > 0 {
+		message = fmt.Sprintf(message, args...)
+	}
+	return &AppError{
+		Code:       ErrInternal,
+		Message:    message,
+		HTTPStatus: http.StatusInternalServerError,
+	}
+}
+
+// NewForbiddenError creates a forbidden error
+func NewForbiddenError(message string) *AppError {
+	return &AppError{
+		Code:       ErrForbidden,
+		Message:    message,
+		HTTPStatus: http.StatusForbidden,
+	}
+}
+
+// NewUnauthenticatedError creates an unauthenticated error
+func NewUnauthenticatedError(message string) *AppError {
+	return &AppError{
+		Code:       ErrUnauthenticated,
+		Message:    message,
+		HTTPStatus: http.StatusUnauthorized,
+	}
 }

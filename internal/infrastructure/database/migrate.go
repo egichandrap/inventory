@@ -60,7 +60,26 @@ func RunMigrations(db *DB) error {
 		statements := splitSQLStatements(sql)
 		for _, stmt := range statements {
 			stmt = strings.TrimSpace(stmt)
-			if stmt == "" || strings.HasPrefix(stmt, "--") {
+			if stmt == "" {
+				continue
+			}
+
+			// Skip pure comment-only statements
+			if strings.HasPrefix(stmt, "--") && !strings.Contains(stmt, ";") {
+				continue
+			}
+
+			// Remove single-line comments from the beginning of the statement
+			for strings.HasPrefix(stmt, "--") {
+				lines := strings.SplitN(stmt, "\n", 2)
+				if len(lines) > 1 {
+					stmt = strings.TrimSpace(lines[1])
+				} else {
+					break
+				}
+			}
+
+			if stmt == "" {
 				continue
 			}
 

@@ -1,0 +1,36 @@
+🚀 Starting server with PostgreSQL...
+✅ Connected to PostgreSQL: egi@localhost:5432/inventory
+🔄 Running database migrations...
+📁 Found 6 migration file(s)
+🔄 Running migration: 001_create_inventories_table.up.sql
+🔄 Running migration: 002_create_tokens_table.up.sql
+🔄 Running migration: 003_seed_inventory_data.up.sql
+⚠️  Warning in 003_seed_inventory_data.up.sql: pq: duplicate key value violates unique constraint "inventories_pkey" (23505)
+🔄 Running migration: 004_create_users_table.up.sql
+⚠️  Warning in 004_create_users_table.up.sql: pq: constraint "chk_users_role" for relation "users" already exists (42710)
+⚠️  Warning in 004_create_users_table.up.sql: pq: constraint "chk_users_status" for relation "users" already exists (42710)
+🔄 Running migration: 005_create_pos_tables.up.sql
+⚠️  Warning in 005_create_pos_tables.up.sql: pq: constraint "chk_transactions_payment_method" for relation "transactions" already exists (42710)
+⚠️  Warning in 005_create_pos_tables.up.sql: pq: constraint "chk_transactions_status" for relation "transactions" already exists (42710)
+🔄 Running migration: 006_add_triggers_and_indexes.up.sql
+⚠️  Warning in 006_add_triggers_and_indexes.up.sql: pq: constraint "chk_inventories_quantity" for relation "inventories" already exists (42710)
+⚠️  Warning in 006_add_triggers_and_indexes.up.sql: pq: constraint "chk_inventories_price" for relation "inventories" already exists (42710)
+✅ Database migrations completed successfully
+🚀 Starting JWT API Server on http://localhost:8080
+📋 Available endpoints:
+   Public Endpoints:
+     POST /api/token/generate - Generate new tokens
+     POST /api/token/refresh  - Refresh access token
+     POST /api/token/validate - Validate token
+     POST /api/token/revoke   - Revoke token
+     GET  /api/health         - Health check
+   Protected Endpoints (require authentication):
+     GET    /api/inventory           - List inventory items
+     POST   /api/inventory           - Create inventory item
+     GET    /api/inventory/{id}      - Get inventory item
+     PUT    /api/inventory/{id}      - Update inventory item
+     DELETE /api/inventory/{id}      - Delete inventory item
+     PUT    /api/inventory/{id}/stock - Update stock quantity
+     POST   /api/inventory/{id}/stock/adjust - Adjust stock
+
+❌ Server failed to start: listen tcp 127.0.0.1:8080: bind: address already in use

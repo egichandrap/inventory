@@ -61,6 +61,31 @@ func (p *Provider) GenerateToken(claims *model.TokenClaims, expiresAt time.Time)
 	return tokenString, nil
 }
 
+// GenerateTokenWithDuration generates a new JWT token with userID, username, role and duration
+func (p *Provider) GenerateTokenWithDuration(userID, username string, role model.UserRole, duration time.Duration) (string, error) {
+	expiresAt := time.Now().Add(duration)
+	
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, CustomClaims{
+		UserID:   userID,
+		Username: username,
+		Role:     string(role),
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expiresAt),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			NotBefore: jwt.NewNumericDate(time.Now()),
+			Issuer:    p.config.Issuer,
+			Subject:   userID,
+		},
+	})
+
+	tokenString, err := token.SignedString([]byte(p.config.SecretKey))
+	if err != nil {
+		return "", apperrors.Wrap(err, apperrors.ErrTokenGeneration, "Failed to sign JWT token", apperrors.ErrTokenGenerationErr.GetHTTPStatus())
+	}
+
+	return tokenString, nil
+}
+
 // ValidateToken validates a JWT token and returns its claims
 func (p *Provider) ValidateToken(tokenString string) (*model.TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
@@ -112,4 +137,13 @@ func (p *Provider) GetExpiration(tokenString string) (time.Time, error) {
 	}
 
 	return claims.ExpiresAt.Time, nil
+}
+
+// ValidateTokenSimple validates a JWT token and returns userID (for AuthService interface)
+func (p *Provider) ValidateTokenSimple(tokenString string) (string, error) {
+	claims, err := p.ValidateToken(tokenString)
+	if err != nil {
+		return "", err
+	}
+	return claims.UserID, nil
 }

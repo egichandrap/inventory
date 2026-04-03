@@ -148,6 +148,33 @@ func GetUserFromContext(ctx context.Context) (userID, username, role string, ok 
 	return userID, username, role, true
 }
 
+// CanManageInventory checks if the user can manage inventory based on role
+func CanManageInventory(ctx context.Context) bool {
+	_, _, role, ok := GetUserFromContext(ctx)
+	if !ok {
+		return false
+	}
+	return role == "SUPER_ADMIN" || role == "ADMIN"
+}
+
+// CanAccessPOS checks if the user can access POS features
+func CanAccessPOS(ctx context.Context) bool {
+	_, _, role, ok := GetUserFromContext(ctx)
+	if !ok {
+		return false
+	}
+	return role == "SUPER_ADMIN" || role == "ADMIN" || role == "CASHIER"
+}
+
+// CanManageUsers checks if the user can manage other users
+func CanManageUsers(ctx context.Context) bool {
+	_, _, role, ok := GetUserFromContext(ctx)
+	if !ok {
+		return false
+	}
+	return role == "SUPER_ADMIN"
+}
+
 // OptionalAuth is a middleware that optionally authenticates if a token is provided
 // but doesn't require it. Useful for endpoints that behave differently for authenticated users.
 func (m *AuthMiddleware) OptionalAuth(next http.Handler) http.Handler {
