@@ -78,7 +78,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp DESC
 -- Inventory alerts table
 CREATE TABLE IF NOT EXISTS inventory_alerts (
     id VARCHAR(100) PRIMARY KEY,
-    inventory_id UUID NOT NULL REFERENCES inventories(id),
+    inventory_id TEXT NOT NULL REFERENCES inventories(id),
     item_name VARCHAR(255) NOT NULL,
     item_sku VARCHAR(100) NOT NULL,
     alert_type VARCHAR(50) NOT NULL,
