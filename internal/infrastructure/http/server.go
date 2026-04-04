@@ -61,6 +61,8 @@ func setupRoutes(
 	inventoryHTTPHandler *inventoryhttp.InventoryHTTPHandler,
 	authHandler *handler.AuthHandler,
 	posHandler *handler.POSHandler,
+	tableHandler *handler.TableHandler,
+	guestOrderHandler *handler.GuestOrderHandler,
 	healthHandler *handler.HealthHandler,
 	authMiddleware *httpmiddleware.AuthMiddleware,
 ) {
@@ -142,17 +144,64 @@ func setupRoutes(
 	// Sales summary
 	posRouter.HandleFunc("/sales/today", posHandler.GetTodaySales).Methods(http.MethodGet)
 
+	// Table Management routes (require authentication, admin only)
+	tableRouter := protectedRouter.PathPrefix("/tables").Subrouter()
+	tableRouter.Use(authMiddleware.RequireRole("SUPER_ADMIN", "ADMIN"))
+
+	tableRouter.HandleFunc("", tableHandler.ListTables).Methods(http.MethodGet)
+	tableRouter.HandleFunc("", tableHandler.CreateTable).Methods(http.MethodPost)
+	tableRouter.HandleFunc("/available", tableHandler.GetAvailableTables).Methods(http.MethodGet)
+	tableRouter.HandleFunc("/{id}", tableHandler.GetTable).Methods(http.MethodGet)
+	tableRouter.HandleFunc("/{id}", tableHandler.UpdateTable).Methods(http.MethodPut)
+	tableRouter.HandleFunc("/{id}", tableHandler.DeleteTable).Methods(http.MethodDelete)
+	tableRouter.HandleFunc("/{id}/status", tableHandler.UpdateTableStatus).Methods(http.MethodPost)
+	tableRouter.HandleFunc("/{id}/qr", tableHandler.GenerateQRCode).Methods(http.MethodPost)
+
+	// Guest Order routes
+	// Public routes (no auth required for customer ordering)
+	guestOrderRouter := r.PathPrefix("/api").Subrouter()
+	guestOrderRouter.HandleFunc("/guest/orders", guestOrderHandler.CreateOrder).Methods(http.MethodPost)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}", guestOrderHandler.GetOrder).Methods(http.MethodGet)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}/items", guestOrderHandler.AddItem).Methods(http.MethodPost)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}/items/{productID}", guestOrderHandler.UpdateItemQuantity).Methods(http.MethodPut)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}/items/{productID}", guestOrderHandler.RemoveItem).Methods(http.MethodDelete)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}/checkout", guestOrderHandler.Checkout).Methods(http.MethodPost)
+	guestOrderRouter.HandleFunc("/guest/orders/{id}/cancel", guestOrderHandler.CancelOrder).Methods(http.MethodPost)
+
+	// Protected routes for order management (staff only)
+	orderRouter := protectedRouter.PathPrefix("/orders").Subrouter()
+	orderRouter.HandleFunc("", guestOrderHandler.ListOrders).Methods(http.MethodGet)
+	orderRouter.HandleFunc("/pending", guestOrderHandler.GetPendingOrders).Methods(http.MethodGet)
+	orderRouter.HandleFunc("/active", guestOrderHandler.GetActiveOrders).Methods(http.MethodGet)
+	orderRouter.HandleFunc("/{id}", guestOrderHandler.GetOrder).Methods(http.MethodGet)
+	orderRouter.HandleFunc("/{id}/status", guestOrderHandler.UpdateOrderStatus).Methods(http.MethodPost)
+	orderRouter.HandleFunc("/{id}/cancel", guestOrderHandler.CancelOrder).Methods(http.MethodPost)
+	orderRouter.HandleFunc("/table/{tableID}", guestOrderHandler.GetOrdersByTable).Methods(http.MethodGet)
+
+	// Reports routes (admin only)
+	reportRouter := protectedRouter.PathPrefix("/reports").Subrouter()
+	reportRouter.Use(authMiddleware.RequireRole("SUPER_ADMIN", "ADMIN"))
+
+	reportRouter.HandleFunc("/sales/today", guestOrderHandler.GetTodaySales).Methods(http.MethodGet)
+
 	// Root endpoint - API info
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		response := map[string]interface{}{
 			"service": "jwt-ddd-clean-pos",
-			"version": "2.0.0",
+			"version": "3.0.0",
 			"endpoints": map[string][]string{
 				"public": {
 					"POST /api/auth/login",
 					"POST /api/auth/register",
 					"POST /api/auth/refresh",
+					"POST /api/guest/orders",
+					"GET  /api/guest/orders/{id}",
+					"POST /api/guest/orders/{id}/items",
+					"PUT  /api/guest/orders/{id}/items/{productID}",
+					"DELETE /api/guest/orders/{id}/items/{productID}",
+					"POST /api/guest/orders/{id}/checkout",
+					"POST /api/guest/orders/{id}/cancel",
 					"GET  /api/health",
 				},
 				"protected": {
@@ -175,12 +224,28 @@ func setupRoutes(
 					"GET    /api/pos/transactions/{id}",
 					"POST   /api/pos/transactions/{id}/cancel",
 					"GET    /api/pos/sales/today",
+					"GET    /api/orders",
+					"GET    /api/orders/pending",
+					"GET    /api/orders/active",
+					"GET    /api/orders/{id}",
+					"POST   /api/orders/{id}/status",
+					"POST   /api/orders/{id}/cancel",
+					"GET    /api/orders/table/{tableID}",
 				},
 				"admin_only": {
 					"GET    /api/admin/users",
 					"GET    /api/admin/users/{id}",
 					"PUT    /api/admin/users/{id}",
 					"DELETE /api/admin/users/{id}",
+					"GET    /api/tables",
+					"POST   /api/tables",
+					"GET    /api/tables/available",
+					"GET    /api/tables/{id}",
+					"PUT    /api/tables/{id}",
+					"DELETE /api/tables/{id}",
+					"POST   /api/tables/{id}/status",
+					"POST   /api/tables/{id}/qr",
+					"GET    /api/reports/sales/today",
 				},
 			},
 		}
@@ -195,9 +260,11 @@ func buildApp(
 	userRepo repository.UserRepository,
 	cartRepo repository.CartRepository,
 	transactionRepo repository.TransactionRepository,
+	tableRepo repository.TableRepository,
+	guestOrderRepo repository.GuestOrderRepository,
 	jwtProvider *jwt.Provider,
 	accessTokenTTL, refreshTokenTTL time.Duration,
-) (*TokenHTTPHandler, *inventoryhttp.InventoryHTTPHandler, *handler.AuthHandler, *handler.POSHandler, *handler.HealthHandler, *httpmiddleware.AuthMiddleware) {
+) (*TokenHTTPHandler, *inventoryhttp.InventoryHTTPHandler, *handler.AuthHandler, *handler.POSHandler, *handler.TableHandler, *handler.GuestOrderHandler, *handler.HealthHandler, *httpmiddleware.AuthMiddleware) {
 	// Domain layer - Services
 	tokenService := service.NewTokenService(
 		tokenRepo,
@@ -210,11 +277,26 @@ func buildApp(
 	authService := service.NewAuthService(userRepo, tokenRepo, jwtProvider)
 	posService := service.NewPOSService(cartRepo, transactionRepo, inventoryRepo)
 
+	// QR Code Service (TODO: Configure with actual logo path and base URL)
+	qrConfig := service.QRCodeConfig{
+		BaseURL:         "http://localhost:8080",
+		MerchantName:    "POS Restaurant",
+		Size:            256,
+		ErrorCorrection: 1, // Medium
+	}
+	qrService := service.NewQRCodeService(qrConfig)
+
+	// Table & Guest Order Services
+	tableService := service.NewTableService(tableRepo, qrService)
+	guestOrderService := service.NewGuestOrderService(guestOrderRepo, tableRepo, inventoryRepo, 11.0) // 11% default tax
+
 	// Application layer - Usecases
 	authUsecase := usecase.NewAuthUsecase(userRepo, tokenRepo, authService)
 	inventoryUsecase := usecase.NewInventoryUsecase(inventoryRepo, inventoryService)
 	posUsecase := usecase.NewPOSUsecase(cartRepo, transactionRepo, inventoryRepo, posService)
 	tokenUsecase := usecase.NewTokenUsecase(tokenService)
+	tableUsecase := usecase.NewTableUsecase(tableService)
+	guestOrderUsecase := usecase.NewGuestOrderUsecase(guestOrderService)
 
 	// Handler layer
 	tokenHandler := handler.NewTokenHandler(tokenUsecase)
@@ -225,13 +307,17 @@ func buildApp(
 	authHandler := handler.NewAuthHandler(authUsecase)
 
 	posHandler := handler.NewPOSHandler(posUsecase)
-	
-	healthHandler := handler.NewHealthHandler("2.0.0")
+
+	tableHandler := handler.NewTableHandler(tableUsecase)
+
+	guestOrderHandler := handler.NewGuestOrderHandler(guestOrderUsecase)
+
+	healthHandler := handler.NewHealthHandler("3.0.0")
 
 	// Middleware (still uses domain token service for low-level validation)
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
-	return tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware
+	return tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, tableHandler, guestOrderHandler, healthHandler, authMiddleware
 }
 
 // NewServer creates a new HTTP server with gorilla/mux
@@ -249,10 +335,12 @@ func NewServer(config ServerConfig) *Server {
 	var userRepo repository.UserRepository = infrarepo.NewMemoryUserRepository()
 	var cartRepo repository.CartRepository = infrarepo.NewMemoryCartRepository()
 	var transactionRepo repository.TransactionRepository = infrarepo.NewMemoryTransactionRepository()
+	var tableRepo repository.TableRepository = infrarepo.NewMemoryTableRepository()
+	var guestOrderRepo repository.GuestOrderRepository = infrarepo.NewMemoryGuestOrderRepository()
 
 	// Build application layers
-	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware := buildApp(
-		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo,
+	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, tableHandler, guestOrderHandler, healthHandler, authMiddleware := buildApp(
+		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo, tableRepo, guestOrderRepo,
 		jwtProvider, config.AccessTokenTTL, config.RefreshTokenTTL,
 	)
 
@@ -260,7 +348,7 @@ func NewServer(config ServerConfig) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, tableHandler, guestOrderHandler, healthHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,
@@ -287,15 +375,17 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	})
 
 	// Infrastructure layer - Repositories (PostgreSQL)
-	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
+	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository() // TODO: Implement PostgreSQL token repository
 	var inventoryRepo repository.InventoryRepository = infrarepo.NewPostgresInventoryRepository(db)
 	var userRepo repository.UserRepository = infrarepo.NewPostgresUserRepository(db)
 	var cartRepo repository.CartRepository = infrarepo.NewPostgresCartRepository(db)
 	var transactionRepo repository.TransactionRepository = infrarepo.NewPostgresTransactionRepository(db)
+	var tableRepo repository.TableRepository = infrarepo.NewPostgresTableRepository(db)
+	var guestOrderRepo repository.GuestOrderRepository = infrarepo.NewPostgresGuestOrderRepository(db)
 
 	// Build application layers
-	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware := buildApp(
-		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo,
+	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, tableHandler, guestOrderHandler, healthHandler, authMiddleware := buildApp(
+		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo, tableRepo, guestOrderRepo,
 		jwtProvider, config.AccessTokenTTL, config.RefreshTokenTTL,
 	)
 
@@ -303,7 +393,7 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, tableHandler, guestOrderHandler, healthHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,

@@ -2,10 +2,35 @@
 
 Sistem **Point of Sale (POS)** yang ultimate dengan **JWT Authentication**, **Role-Based Access Control**, dan **Full POS Workflow** yang dibangun dengan **Clean Architecture** dan **Domain-Driven Design (DDD)** principles.
 
-![Version](https://img.shields.io/badge/version-3.0.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.1.0-blue.svg)
 ![Go](https://img.shields.io/badge/go-1.26+-00ADD8.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-336791.svg)
+
+## 🎉 What's New in v3.1.0 - QR Table Ordering System
+
+### ✨ New Features
+
+#### 📱 QR Table Ordering System
+- ✅ **Table Management** - CRUD operations untuk meja restaurant
+- ✅ **QR Code Generation** - Generate QR codes dengan custom design & logo
+- ✅ **Guest Ordering** - Customer bisa order langsung dari meja via scan QR
+- ✅ **Order Workflow** - Complete order lifecycle (pending → confirmed → preparing → ready → served)
+- ✅ **Dual Payment Flow** - Pay at counter & online payment support
+- ✅ **Kitchen Integration** - Order langsung masuk ke kitchen dashboard
+- ✅ **Real-time Status** - Track order status secara real-time
+
+#### 🗄️ Database Enhancements
+- ✅ **Tables Table** - Store table information with QR codes
+- ✅ **Guest Orders Table** - Complete order management with JSONB items
+- ✅ **Auto Migrations** - 2 new migration files (007 & 008)
+- ✅ **Full PostgreSQL** - All data persisted to database
+
+#### 🚀 Performance & Quality
+- ✅ **Memory Repositories** - In-memory implementations for testing
+- ✅ **Thread Safety** - All repositories use sync.RWMutex
+- ✅ **Clean Architecture** - Strict layer separation maintained
+- ✅ **Type Safety** - No unsafe type assertions
 
 ## 🎉 What's New in v3.0.0 - Performance & Production Ready
 
@@ -36,6 +61,122 @@ Sistem **Point of Sale (POS)** yang ultimate dengan **JWT Authentication**, **Ro
 - ✅ **Persistent Token Blacklist** - Logout/revocation survives server restarts
 - ✅ **Cart Persistence** - Shopping carts saved to database
 - ✅ **Transaction Durability** - Sales records immediately persisted
+
+---
+
+## 📱 QR Table Ordering System
+
+### Overview
+Sistem QR Table Ordering memungkinkan customer untuk:
+1. **Scan QR Code** di meja restaurant
+2. **Browse Menu** secara digital di HP mereka
+3. **Place Orders** langsung dari meja
+4. **Track Order Status** secara real-time
+5. **Pay** di counter atau online (payment gateway integration ready)
+
+### How It Works
+
+```
+┌─────────────────────────────────────────────────────┐
+│  Customer Experience Flow                           │
+├─────────────────────────────────────────────────────┤
+│  1. Customer duduk di meja                          │
+│  2. Scan QR code di meja                            │
+│  3. HP membuka web app (no install needed)          │
+│  4. Browse menu & pilih items                       │
+│  5. Add to cart & checkout                          │
+│  6. Order masuk ke kitchen dashboard                │
+│  7. Track status: Pending → Preparing → Ready       │
+│  8. Bayar di counter atau online payment            │
+└─────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────┐
+│  Staff/Kitchen Dashboard                             │
+├─────────────────────────────────────────────────────┤
+│  • Terima order baru (real-time)                    │
+│  • Update order status                              │
+│  • Manage tables (available/occupied/reserved)      │
+│  • Generate & download QR codes                     │
+│  • View sales reports                               │
+└─────────────────────────────────────────────────────┘
+```
+
+### API Endpoints - QR Table Ordering
+
+#### 📋 Table Management (Admin Only)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/tables` | List all tables | Admin |
+| `POST` | `/api/tables` | Create new table | Admin |
+| `GET` | `/api/tables/{id}` | Get table details | Admin |
+| `PUT` | `/api/tables/{id}` | Update table | Admin |
+| `DELETE` | `/api/tables/{id}` | Delete table | Admin |
+| `GET` | `/api/tables/available` | Get available tables | Public |
+| `POST` | `/api/tables/{id}/status` | Update table status | Admin |
+| `POST` | `/api/tables/{id}/qr` | Generate QR code | Admin |
+
+#### 🛒 Guest Ordering (Public - No Auth Required)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `POST` | `/api/guest/orders` | Create new order | Public |
+| `GET` | `/api/guest/orders/{id}` | Get order details | Public |
+| `POST` | `/api/guest/orders/{id}/items` | Add item to order | Public |
+| `PUT` | `/api/guest/orders/{id}/items/{productID}` | Update item quantity | Public |
+| `DELETE` | `/api/guest/orders/{id}/items/{productID}` | Remove item | Public |
+| `POST` | `/api/guest/orders/{id}/checkout` | Checkout order | Public |
+| `POST` | `/api/guest/orders/{id}/cancel` | Cancel order | Public |
+
+#### 📦 Order Management (Staff)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/orders` | List all orders | Staff |
+| `GET` | `/api/orders/pending` | Get pending orders | Staff |
+| `GET` | `/api/orders/active` | Get active orders | Staff |
+| `GET` | `/api/orders/{id}` | Get order details | Staff |
+| `POST` | `/api/orders/{id}/status` | Update order status | Staff |
+| `POST` | `/api/orders/{id}/cancel` | Cancel order | Staff |
+| `GET` | `/api/orders/table/{tableID}` | Get orders by table | Staff |
+
+#### 📊 Reports (Admin Only)
+
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| `GET` | `/api/reports/sales/today` | Today's sales summary | Admin |
+
+### QR Code Generation
+
+QR codes digenerate dengan fitur:
+- **Custom Design** - Dengan logo restaurant
+- **Embedded URL** - Link langsung ke order page dengan table context
+- **Multiple Formats** - PNG, base64, atau file
+- **Bulk Generation** - Generate semua QR codes sekaligus
+- **Persistent Storage** - Stored in database as base64
+
+**Example QR Code Content:**
+```
+https://pos.restaurant.com/order?table=5&id=uuid-here
+```
+
+### Order Status Workflow
+
+```
+PENDING → CONFIRMED → PREPARING → READY → SERVED
+                               ↓
+                          CANCELLED (anytime before served)
+```
+
+### Database Schema
+
+**Tables:**
+- `tables` - Store table information (number, location, capacity, status, QR code)
+- `guest_orders` - Store guest orders with full order details in JSONB
+
+**Migrations:**
+- `007_create_tables_table.up.sql` - Creates tables table
+- `008_create_guest_orders_table.up.sql` - Creates guest_orders table
 
 ---
 
