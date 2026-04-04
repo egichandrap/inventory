@@ -317,7 +317,7 @@ func (s *POSService) CancelTransaction(ctx context.Context, transactionID string
 		return nil, errors.NewNotFoundError("transaksi", "id", transactionID)
 	}
 
-	if transaction.Status() != model.TransactionCompleted {
+	if !transaction.IsCancellable() {
 		return nil, errors.NewValidationError("hanya transaksi yang sudah selesai yang bisa dibatalkan")
 	}
 
@@ -334,6 +334,35 @@ func (s *POSService) CancelTransaction(ctx context.Context, transactionID string
 	transaction.Cancel()
 	if err := s.transactionRepo.Update(ctx, transaction); err != nil {
 		return nil, errors.NewInternalError("gagal membatalkan transaksi")
+	}
+
+	return transaction, nil
+}
+
+// RefundTransaction refunds a transaction and restores inventory
+func (s *POSService) RefundTransaction(ctx context.Context, transactionID string) (*model.Transaction, error) {
+	transaction, err := s.transactionRepo.GetByID(ctx, transactionID)
+	if err != nil {
+		return nil, errors.NewNotFoundError("transaksi", "id", transactionID)
+	}
+
+	if !transaction.IsRefundable() {
+		return nil, errors.NewValidationError("hanya transaksi yang sudah selesai yang bisa di-refund")
+	}
+
+	// Restore inventory
+	for _, item := range transaction.Items() {
+		product, err := s.inventoryRepo.GetByID(ctx, item.ProductID())
+		if err == nil {
+			newQty := product.Quantity() + item.Quantity()
+			s.inventoryRepo.UpdateQuantity(ctx, product.ID(), newQty)
+		}
+	}
+
+	// Update transaction status
+	transaction.Refund()
+	if err := s.transactionRepo.Update(ctx, transaction); err != nil {
+		return nil, errors.NewInternalError("gagal melakukan refund transaksi")
 	}
 
 	return transaction, nil

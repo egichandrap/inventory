@@ -259,10 +259,26 @@ func (t *Transaction) Complete(method PaymentMethod, amountPaid float64) error {
 
 // Cancel cancels the transaction
 func (t *Transaction) Cancel() error {
+	if t.status != TransactionCompleted {
+		return fmt.Errorf("hanya transaksi yang sudah selesai yang bisa dibatalkan")
+	}
 	if t.status == TransactionCancelled {
 		return fmt.Errorf("transaksi sudah dibatalkan")
 	}
 	t.status = TransactionCancelled
+	t.updatedAt = time.Now()
+	return nil
+}
+
+// Refund refunds the transaction
+func (t *Transaction) Refund() error {
+	if t.status != TransactionCompleted {
+		return fmt.Errorf("hanya transaksi yang sudah selesai yang bisa di-refund")
+	}
+	if t.status == TransactionRefunded {
+		return fmt.Errorf("transaksi sudah di-refund")
+	}
+	t.status = TransactionRefunded
 	t.updatedAt = time.Now()
 	return nil
 }
@@ -275,4 +291,14 @@ func (t *Transaction) IsCompleted() bool {
 // IsCancellable checks if transaction can be cancelled
 func (t *Transaction) IsCancellable() bool {
 	return t.status == TransactionCompleted
+}
+
+// IsRefundable checks if transaction can be refunded
+func (t *Transaction) IsRefundable() bool {
+	return t.status == TransactionCompleted
+}
+
+// IsRefunded checks if transaction is refunded
+func (t *Transaction) IsRefunded() bool {
+	return t.status == TransactionRefunded
 }

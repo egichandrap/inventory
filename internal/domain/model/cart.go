@@ -3,16 +3,41 @@ package model
 import (
 	"fmt"
 	"time"
+
+	"github.com/google/uuid"
+)
+
+// CartStatus represents the status of a cart
+type CartStatus string
+
+const (
+	CartActive     CartStatus = "ACTIVE"
+	CartOnHold     CartStatus = "ON_HOLD"
+	CartCheckedOut CartStatus = "CHECKED_OUT"
 )
 
 // CartItem represents an item in the shopping cart
 type CartItem struct {
-	productID   string
-	productName string
-	sku         string
-	quantity    int
-	unitPrice   float64
-	subtotal    float64
+	productID   string `json:"product_id"`
+	productName string `json:"product_name"`
+	sku         string `json:"sku"`
+	quantity    int    `json:"quantity"`
+	unitPrice   float64`json:"unit_price"`
+	subtotal    float64`json:"subtotal"`
+}
+
+// Cart represents a shopping cart aggregate root
+type Cart struct {
+	id           string
+	userID       string
+	customerName string
+	customerID   string
+	items        []CartItem
+	status       CartStatus
+	totalAmount  float64
+	notes        string
+	createdAt    time.Time
+	updatedAt    time.Time
 }
 
 // NewCartItem creates a new cart item
@@ -61,23 +86,13 @@ func (i *CartItem) Quantity() int         { return i.quantity }
 func (i *CartItem) UnitPrice() float64    { return i.unitPrice }
 func (i *CartItem) Subtotal() float64     { return i.subtotal }
 
+
 // UpdateQuantity updates the quantity and recalculates subtotal
 func (i *CartItem) UpdateQuantity(quantity int) {
 	if quantity > 0 {
 		i.quantity = quantity
 		i.subtotal = float64(quantity) * i.unitPrice
 	}
-}
-
-// Cart represents a shopping cart aggregate root
-type Cart struct {
-	id           string
-	userID       string
-	customerName string
-	items        []CartItem
-	totalAmount  float64
-	createdAt    time.Time
-	updatedAt    time.Time
 }
 
 // NewCart creates a new cart entity
@@ -88,9 +103,11 @@ func NewCart(userID string, customerName string) (*Cart, error) {
 
 	now := time.Now()
 	return &Cart{
+		id:           uuid.New().String(),
 		userID:       userID,
 		customerName: customerName,
 		items:        make([]CartItem, 0),
+		status:       CartActive,
 		createdAt:    now,
 		updatedAt:    now,
 	}, nil
@@ -119,9 +136,16 @@ func (c *Cart) ID() string           { return c.id }
 func (c *Cart) UserID() string       { return c.userID }
 func (c *Cart) CustomerName() string { return c.customerName }
 func (c *Cart) Items() []CartItem    { return c.items }
+func (c *Cart) Total() float64       { return c.totalAmount }
 func (c *Cart) TotalAmount() float64 { return c.totalAmount }
 func (c *Cart) CreatedAt() time.Time { return c.createdAt }
 func (c *Cart) UpdatedAt() time.Time { return c.updatedAt }
+
+// SetCustomerName sets the customer name
+func (c *Cart) SetCustomerName(name string) {
+	c.customerName = name
+	c.updatedAt = time.Now()
+}
 
 // AddItem adds or updates an item in the cart
 func (c *Cart) AddItem(productID, productName, sku string, quantity int, unitPrice float64) error {
@@ -202,6 +226,76 @@ func (c *Cart) IsEmpty() bool {
 // ItemCount returns the number of items in the cart
 func (c *Cart) ItemCount() int {
 	return len(c.items)
+}
+
+// Status returns the cart status
+func (c *Cart) Status() CartStatus {
+	return c.status
+}
+
+// Notes returns the cart notes
+func (c *Cart) Notes() string {
+	return c.notes
+}
+
+// SetNotes sets the cart notes
+func (c *Cart) SetNotes(notes string) {
+	c.notes = notes
+	c.updatedAt = time.Now()
+}
+
+// SetCustomerID sets the customer ID
+func (c *Cart) SetCustomerID(customerID string) {
+	c.customerID = customerID
+	c.updatedAt = time.Now()
+}
+
+// Hold puts the cart on hold
+func (c *Cart) Hold() error {
+	if c.status != CartActive {
+		return fmt.Errorf("cart tidak dapat di-hold, status saat ini: %s", c.status)
+	}
+	if c.IsEmpty() {
+		return fmt.Errorf("cart kosong, tidak dapat di-hold")
+	}
+	c.status = CartOnHold
+	c.updatedAt = time.Now()
+	return nil
+}
+
+// Resume resumes a cart from hold status
+func (c *Cart) Resume() error {
+	if c.status != CartOnHold {
+		return fmt.Errorf("cart tidak dapat di-resume, status saat ini: %s", c.status)
+	}
+	c.status = CartActive
+	c.updatedAt = time.Now()
+	return nil
+}
+
+// MarkAsCheckout marks the cart as checked out
+func (c *Cart) MarkAsCheckout() error {
+	if c.status != CartActive {
+		return fmt.Errorf("cart tidak dapat di-checkout, status saat ini: %s", c.status)
+	}
+	c.status = CartCheckedOut
+	c.updatedAt = time.Now()
+	return nil
+}
+
+// CanCheckout checks if cart can be checked out
+func (c *Cart) CanCheckout() bool {
+	return c.status == CartActive && !c.IsEmpty()
+}
+
+// IsOnHold checks if cart is on hold
+func (c *Cart) IsOnHold() bool {
+	return c.status == CartOnHold
+}
+
+// IsCheckedOut checks if cart is checked out
+func (c *Cart) IsCheckedOut() bool {
+	return c.status == CartCheckedOut
 }
 
 // recalculateTotal recalculates the total amount

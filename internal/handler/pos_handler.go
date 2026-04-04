@@ -266,6 +266,20 @@ func (h *POSHandler) CancelTransaction(w http.ResponseWriter, r *http.Request) {
 	h.sendJSON(w, http.StatusOK, true, "Transaksi berhasil dibatalkan", transaction)
 }
 
+// RefundTransaction refunds a transaction
+func (h *POSHandler) RefundTransaction(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	transactionID := vars["id"]
+
+	transaction, err := h.posUsecase.RefundTransaction(r.Context(), transactionID)
+	if err != nil {
+		h.sendError(w, err)
+		return
+	}
+
+	h.sendJSON(w, http.StatusOK, true, "Transaksi berhasil di-refund", transaction)
+}
+
 // Helper methods
 
 func (h *POSHandler) sendJSON(w http.ResponseWriter, status int, success bool, message string, data interface{}) {

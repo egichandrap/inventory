@@ -1,0 +1,705 @@
+openapi: 3.0.3
+info:
+  title: Ultimate POS System API
+  description: |
+    Comprehensive Point of Sale (POS) system with JWT authentication, 
+    role-based access control, and full POS workflow.
+  version: 2.1.0
+  contact:
+    name: API Support
+    email: support@pos.local
+
+servers:
+  - url: http://localhost:8080
+    description: Development server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: ERR_VALIDATION
+            message:
+              type: string
+              example: Validation failed
+            details:
+              type: string
+              example: Invalid input
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: admin
+        password:
+          type: string
+          example: admin123
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Login berhasil
+        data:
+          type: object
+          properties:
+            access_token:
+              type: string
+            refresh_token:
+              type: string
+            token_type:
+              type: string
+              example: Bearer
+            expires_in:
+              type: integer
+              example: 86400
+            user:
+              $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [SUPER_ADMIN, ADMIN, CASHIER, VIEWER]
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+
+    Cart:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        customer_name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+        total_amount:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [ACTIVE, ON_HOLD, CHECKED_OUT]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CartItem:
+      type: object
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+          format: double
+        subtotal:
+          type: number
+          format: double
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        transaction_no:
+          type: string
+          example: TRX-20260404-0001
+        cashier_name:
+          type: string
+        customer_name:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionItem'
+        subtotal:
+          type: number
+          format: double
+        discount_amount:
+          type: number
+          format: double
+        tax_amount:
+          type: number
+          format: double
+        total_amount:
+          type: number
+          format: double
+        payment_method:
+          type: string
+          enum: [CASH, CARD, QRIS, E_WALLET, TRANSFER]
+        payment_amount:
+          type: number
+          format: double
+        change_amount:
+          type: number
+          format: double
+        status:
+          type: string
+          enum: [PENDING, COMPLETED, CANCELLED, REFUNDED]
+        created_at:
+          type: string
+          format: date-time
+
+    TransactionItem:
+      type: object
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        product_name:
+          type: string
+        sku:
+          type: string
+        quantity:
+          type: integer
+        unit_price:
+          type: number
+          format: double
+        subtotal:
+          type: number
+          format: double
+
+    Inventory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        quantity:
+          type: integer
+        unit:
+          type: string
+        price:
+          type: number
+          format: double
+        location:
+          type: string
+        min_stock:
+          type: integer
+        max_stock:
+          type: integer
+        barcode:
+          type: string
+        barcode_type:
+          type: string
+          enum: [EAN13, EAN8, CODE128, QR, UPC]
+        category_id:
+          type: string
+          format: uuid
+        store_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+        level:
+          type: integer
+        is_active:
+          type: boolean
+        product_count:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+
+    Customer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+        loyalty_points:
+          type: integer
+        total_purchases:
+          type: number
+          format: double
+        created_at:
+          type: string
+          format: date-time
+
+    Store:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        manager_name:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    SalesReport:
+      type: object
+      properties:
+        total_sales:
+          type: number
+          format: double
+        total_transactions:
+          type: integer
+        total_items:
+          type: integer
+        average_transaction:
+          type: number
+          format: double
+        date_range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        version:
+          type: string
+          example: 2.1.0
+        uptime:
+          type: string
+          example: 2h30m15s
+        timestamp:
+          type: string
+          format: date-time
+
+paths:
+  /api/auth/login:
+    post:
+      summary: Login to get JWT tokens
+      tags: [Authentication]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/health:
+    get:
+      summary: Health check endpoint
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheck'
+
+  /api/pos/cart:
+    post:
+      summary: Create a new shopping cart
+      tags: [POS - Cart]
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_name:
+                  type: string
+      responses:
+        '201':
+          description: Cart created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Cart'
+
+  /api/pos/cart/my:
+    get:
+      summary: Get or create current user's cart
+      tags: [POS - Cart]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Cart retrieved or created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Cart'
+
+  /api/pos/cart/{id}/items:
+    post:
+      summary: Add item to cart
+      tags: [POS - Cart]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - product_id
+                - quantity
+              properties:
+                product_id:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Item added to cart
+        '400':
+          description: Bad request
+        '404':
+          description: Cart or product not found
+
+  /api/pos/checkout/{id}:
+    post:
+      summary: Checkout cart
+      tags: [POS - Checkout]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_method
+                - payment_amount
+              properties:
+                payment_method:
+                  type: string
+                  enum: [CASH, CARD, QRIS, E_WALLET, TRANSFER]
+                payment_amount:
+                  type: number
+                  format: double
+                customer_name:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Checkout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Transaction'
+
+  /api/pos/transactions:
+    get:
+      summary: List transactions with pagination
+      tags: [POS - Transactions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [PENDING, COMPLETED, CANCELLED, REFUNDED]
+        - name: payment_method
+          in: query
+          schema:
+            type: string
+            enum: [CASH, CARD, QRIS, E_WALLET, TRANSFER]
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      transactions:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transaction'
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+
+  /api/pos/transactions/{id}/cancel:
+    post:
+      summary: Cancel a transaction
+      tags: [POS - Transactions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction cancelled
+        '400':
+          description: Cannot cancel transaction
+        '404':
+          description: Transaction not found
+
+  /api/pos/transactions/{id}/refund:
+    post:
+      summary: Refund a transaction
+      tags: [POS - Transactions]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction refunded
+        '400':
+          description: Cannot refund transaction
+        '404':
+          description: Transaction not found
+
+  /api/pos/sales/today:
+    get:
+      summary: Get today's sales summary
+      tags: [POS - Reports]
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Sales summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SalesReport'
+
+  /api/inventory:
+    get:
+      summary: List inventory items
+      tags: [Inventory]
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: sku
+          in: query
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: List of inventory items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Inventory'
+    post:
+      summary: Create inventory item
+      tags: [Inventory]
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inventory'
+      responses:
+        '201':
+          description: Inventory item created
+        '400':
+          description: Bad request
+        '403':
+          description: Forbidden (admin only)
+
+  /api/ready:
+    get:
+      summary: Readiness check (Kubernetes)
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is ready
+
+  /api/live:
+    get:
+      summary: Liveness check (Kubernetes)
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is alive

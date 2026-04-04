@@ -90,5 +90,24 @@ func (r *MemoryCartRepository) ClearItems(ctx context.Context, cartID string) er
 	return nil
 }
 
+// ListByStatus retrieves carts by status
+func (r *MemoryCartRepository) ListByStatus(ctx context.Context, status model.CartStatus, limit, offset int) ([]*model.Cart, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []*model.Cart
+	count := 0
+	for _, cart := range r.carts {
+		if cart.Status() == status {
+			if count >= offset && len(result) < limit {
+				result = append(result, cart)
+			}
+			count++
+		}
+	}
+
+	return result, nil
+}
+
 // Ensure interface implementation
 var _ repository.CartRepository = (*MemoryCartRepository)(nil)

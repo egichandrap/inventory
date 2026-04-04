@@ -26,6 +26,9 @@ type CartRepository interface {
 
 	// ClearItems removes all items from a cart
 	ClearItems(ctx context.Context, cartID string) error
+
+	// ListByStatus retrieves carts by status
+	ListByStatus(ctx context.Context, status model.CartStatus, limit, offset int) ([]*model.Cart, error)
 }
 
 // TransactionRepository defines the interface for transaction data operations

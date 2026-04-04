@@ -61,17 +61,30 @@ func setupRoutes(
 	inventoryHTTPHandler *inventoryhttp.InventoryHTTPHandler,
 	authHandler *handler.AuthHandler,
 	posHandler *handler.POSHandler,
+	healthHandler *handler.HealthHandler,
 	authMiddleware *httpmiddleware.AuthMiddleware,
 ) {
+	// Apply security middleware globally
+	r.Use(httpmiddleware.SecurityHeadersMiddleware)
+	r.Use(httpmiddleware.ValidationMiddleware)
+	r.Use(httpmiddleware.MaxBodySizeMiddleware(httpmiddleware.DefaultMaxBodySize))
+
 	// Public routes (no authentication required)
-	r.HandleFunc("/api/auth/login", authHandler.Login).Methods(http.MethodPost)
-	r.HandleFunc("/api/auth/register", authHandler.Register).Methods(http.MethodPost)
-	r.HandleFunc("/api/auth/refresh", authHandler.RefreshToken).Methods(http.MethodPost)
-	r.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
-	r.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
-	r.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
-	r.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
-	r.HandleFunc("/api/health", tokenHTTPHandler.Health).Methods(http.MethodGet)
+	publicRouter := r.PathPrefix("/api").Subrouter()
+	publicRouter.Use(httpmiddleware.LoginMaxBodyMiddleware())
+	
+	publicRouter.HandleFunc("/api/auth/login", authHandler.Login).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/auth/register", authHandler.Register).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/auth/refresh", authHandler.RefreshToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
+	
+	// Health check routes (no security headers needed)
+	r.HandleFunc("/api/health", healthHandler.HealthCheck).Methods(http.MethodGet)
+	r.HandleFunc("/api/ready", healthHandler.Ready).Methods(http.MethodGet)
+	r.HandleFunc("/api/live", healthHandler.Live).Methods(http.MethodGet)
 
 	// Protected routes (authentication required)
 	protectedRouter := r.PathPrefix("/api").Subrouter()
@@ -124,6 +137,7 @@ func setupRoutes(
 	posRouter.HandleFunc("/transactions", posHandler.ListTransactions).Methods(http.MethodGet)
 	posRouter.HandleFunc("/transactions/{id}", posHandler.GetTransaction).Methods(http.MethodGet)
 	posRouter.HandleFunc("/transactions/{id}/cancel", posHandler.CancelTransaction).Methods(http.MethodPost)
+	posRouter.HandleFunc("/transactions/{id}/refund", posHandler.RefundTransaction).Methods(http.MethodPost)
 
 	// Sales summary
 	posRouter.HandleFunc("/sales/today", posHandler.GetTodaySales).Methods(http.MethodGet)
@@ -183,7 +197,7 @@ func buildApp(
 	transactionRepo repository.TransactionRepository,
 	jwtProvider *jwt.Provider,
 	accessTokenTTL, refreshTokenTTL time.Duration,
-) (*TokenHTTPHandler, *inventoryhttp.InventoryHTTPHandler, *handler.AuthHandler, *handler.POSHandler, *httpmiddleware.AuthMiddleware) {
+) (*TokenHTTPHandler, *inventoryhttp.InventoryHTTPHandler, *handler.AuthHandler, *handler.POSHandler, *handler.HealthHandler, *httpmiddleware.AuthMiddleware) {
 	// Domain layer - Services
 	tokenService := service.NewTokenService(
 		tokenRepo,
@@ -211,11 +225,13 @@ func buildApp(
 	authHandler := handler.NewAuthHandler(authUsecase)
 
 	posHandler := handler.NewPOSHandler(posUsecase)
+	
+	healthHandler := handler.NewHealthHandler("2.0.0")
 
 	// Middleware (still uses domain token service for low-level validation)
 	authMiddleware := httpmiddleware.NewAuthMiddleware(tokenService)
 
-	return tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware
+	return tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware
 }
 
 // NewServer creates a new HTTP server with gorilla/mux
@@ -235,7 +251,7 @@ func NewServer(config ServerConfig) *Server {
 	var transactionRepo repository.TransactionRepository = infrarepo.NewMemoryTransactionRepository()
 
 	// Build application layers
-	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware := buildApp(
+	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware := buildApp(
 		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo,
 		jwtProvider, config.AccessTokenTTL, config.RefreshTokenTTL,
 	)
@@ -244,7 +260,7 @@ func NewServer(config ServerConfig) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,
@@ -274,11 +290,11 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	var tokenRepo repository.TokenRepository = infrarepo.NewMemoryTokenRepository()
 	var inventoryRepo repository.InventoryRepository = infrarepo.NewPostgresInventoryRepository(db)
 	var userRepo repository.UserRepository = infrarepo.NewPostgresUserRepository(db)
-	var cartRepo repository.CartRepository = infrarepo.NewMemoryCartRepository() // TODO: Implement PostgreSQL cart repository
-	var transactionRepo repository.TransactionRepository = infrarepo.NewMemoryTransactionRepository() // TODO: Implement PostgreSQL transaction repository
+	var cartRepo repository.CartRepository = infrarepo.NewPostgresCartRepository(db)
+	var transactionRepo repository.TransactionRepository = infrarepo.NewPostgresTransactionRepository(db)
 
 	// Build application layers
-	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware := buildApp(
+	tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware := buildApp(
 		tokenRepo, inventoryRepo, userRepo, cartRepo, transactionRepo,
 		jwtProvider, config.AccessTokenTTL, config.RefreshTokenTTL,
 	)
@@ -287,7 +303,7 @@ func NewServerWithDatabase(config ServerConfig, db *sql.DB) *Server {
 	r := mux.NewRouter()
 
 	// Setup routes
-	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, authMiddleware)
+	setupRoutes(r, tokenHTTPHandler, inventoryHTTPHandler, authHandler, posHandler, healthHandler, authMiddleware)
 
 	server := &http.Server{
 		Addr:         config.Host + ":" + config.Port,

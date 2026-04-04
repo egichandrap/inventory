@@ -24,6 +24,7 @@ type POSUsecase interface {
 	ListTransactions(ctx context.Context, filter repository.TransactionFilter) (*dto.TransactionListResponse, error)
 	GetTodaySales(ctx context.Context) (*dto.SalesSummaryResponse, error)
 	CancelTransaction(ctx context.Context, transactionID string) (*dto.TransactionResponse, error)
+	RefundTransaction(ctx context.Context, transactionID string) (*dto.TransactionResponse, error)
 }
 
 type posUsecase struct {
@@ -172,6 +173,15 @@ func (u *posUsecase) GetTodaySales(ctx context.Context) (*dto.SalesSummaryRespon
 
 func (u *posUsecase) CancelTransaction(ctx context.Context, transactionID string) (*dto.TransactionResponse, error) {
 	transaction, err := u.posService.CancelTransaction(ctx, transactionID)
+	if err != nil {
+		return nil, err
+	}
+
+	return dto.ToTransactionResponse(transaction), nil
+}
+
+func (u *posUsecase) RefundTransaction(ctx context.Context, transactionID string) (*dto.TransactionResponse, error) {
+	transaction, err := u.posService.RefundTransaction(ctx, transactionID)
 	if err != nil {
 		return nil, err
 	}
