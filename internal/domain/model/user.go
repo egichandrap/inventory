@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/example/jwt-ddd-clean/internal/domain/valueobject"
+	"github.com/google/uuid"
 )
 
 // UserRole represents the role of a user in the system
@@ -60,6 +61,7 @@ func NewUser(
 
 	now := time.Now()
 	return &User{
+		id:           uuid.New().String(),
 		username:     username,
 		email:        email,
 		passwordHash: password,

@@ -11,6 +11,7 @@ import (
 	"github.com/example/jwt-ddd-clean/internal/domain/repository"
 	"github.com/example/jwt-ddd-clean/internal/pkg/errors"
 	"github.com/gorilla/mux"
+	middlewarehttp "github.com/example/jwt-ddd-clean/internal/http/middleware"
 )
 
 // POSHandler handles Point of Sale HTTP requests
@@ -27,7 +28,11 @@ func NewPOSHandler(posUsecase usecase.POSUsecase) *POSHandler {
 
 // CreateCart creates a new cart
 func (h *POSHandler) CreateCart(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middlewarehttp.UserIDKey).(string)
+	if !ok || userID == "" {
+		h.sendError(w, errors.NewUnauthenticatedError("user not found in context"))
+		return
+	}
 
 	var req struct {
 		CustomerName string `json:"customer_name,omitempty"`
@@ -62,7 +67,11 @@ func (h *POSHandler) GetCart(w http.ResponseWriter, r *http.Request) {
 
 // GetOrCreateCart gets existing cart or creates new one
 func (h *POSHandler) GetOrCreateCart(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middlewarehttp.UserIDKey).(string)
+	if !ok || userID == "" {
+		h.sendError(w, errors.NewUnauthenticatedError("user not found in context"))
+		return
+	}
 
 	cart, err := h.posUsecase.GetOrCreateCart(r.Context(), userID)
 	if err != nil {
@@ -180,7 +189,7 @@ func (h *POSHandler) Checkout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get cashier name from context
-	cashierName, _ := r.Context().Value("username").(string)
+	cashierName, _ := r.Context().Value(middlewarehttp.UsernameKey).(string)
 
 	transaction, err := h.posUsecase.Checkout(r.Context(), cartID, req, cashierName)
 	if err != nil {

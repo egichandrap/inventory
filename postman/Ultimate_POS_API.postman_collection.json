@@ -1,14 +1,14 @@
 {
 	"info": {
 		"name": "Ultimate POS System API",
-		"description": "Complete Postman Collection for Ultimate POS System with JWT Authentication, Role-Based Access Control, and Full POS Functionality",
+		"description": "Complete Postman Collection for Ultimate POS System - Fixed routes without double prefix",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"version": "2.0.0"
+		"version": "3.2.0"
 	},
 	"variable": [
 		{
 			"key": "base_url",
-			"value": "http://localhost:8080/api",
+			"value": "http://localhost:8080",
 			"type": "string"
 		},
 		{
@@ -40,24 +40,88 @@
 			"key": "inventory_id",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "order_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "guest_order_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "table_id",
+			"value": "",
+			"type": "string"
 		}
 	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{access_token}}",
-				"type": "string"
-			}
-		]
-	},
 	"item": [
 		{
-			"name": "1. Authentication",
+			"name": "1. Public - Health & Info",
 			"item": [
 				{
-					"name": "Login as Super Admin",
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health"]
+						},
+						"description": "Check API health status"
+					},
+					"response": []
+				},
+				{
+					"name": "Readiness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/ready",
+							"host": ["{{base_url}}"],
+							"path": ["api", "ready"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Liveness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/live",
+							"host": ["{{base_url}}"],
+							"path": ["api", "live"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "API Info",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": ["{{base_url}}"],
+							"path": [""]
+						},
+						"description": "Get API information and available endpoints"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Public - Authentication",
+			"item": [
+				{
+					"name": "Login (Super Admin)",
 					"event": [
 						{
 							"listen": "test",
@@ -78,14 +142,12 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -93,16 +155,16 @@
 							"raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"admin123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/auth/login",
+							"raw": "{{base_url}}/api/auth/login",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "login"]
+							"path": ["api", "auth", "login"]
 						},
 						"description": "Login as Super Admin to get JWT tokens"
 					},
 					"response": []
 				},
 				{
-					"name": "Login as Admin",
+					"name": "Login (Admin)",
 					"event": [
 						{
 							"listen": "test",
@@ -119,14 +181,12 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -134,15 +194,15 @@
 							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/auth/login",
+							"raw": "{{base_url}}/api/auth/login",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "login"]
+							"path": ["api", "auth", "login"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Login as Cashier",
+					"name": "Login (Cashier)",
 					"event": [
 						{
 							"listen": "test",
@@ -159,14 +219,12 @@
 						}
 					],
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -174,34 +232,192 @@
 							"raw": "{\n  \"username\": \"cashier\",\n  \"password\": \"cashier123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/auth/login",
+							"raw": "{{base_url}}/api/auth/login",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "login"]
+							"path": ["api", "auth", "login"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Register New User",
+					"name": "Register",
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "POST",
 						"header": [
 							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"username\": \"cashier2\",\n  \"email\": \"cashier2@pos.local\",\n  \"password\": \"cashier123\",\n  \"full_name\": \"Cashier Two\",\n  \"role\": \"CASHIER\"\n}"
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\",\n  \"password\": \"password123\",\n  \"full_name\": \"New User\",\n  \"role\": \"CASHIER\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/auth/register",
+							"raw": "{{base_url}}/api/auth/register",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "register"]
+							"path": ["api", "auth", "register"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "refresh"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Public - Token Management",
+			"item": [
+				{
+					"name": "Generate Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.access_token) {",
+									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
+									"    pm.collectionVariables.set('refresh_token', jsonData.data.refresh_token);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"superadmin\",\n  \"password\": \"admin123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/generate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", "generate"]
+						},
+						"description": "Generate new JWT tokens (alternative to login)"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token (Alt)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/refresh",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", "refresh"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"access_token\": \"{{access_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/validate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", "validate"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Revoke Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/token/revoke",
+							"host": ["{{base_url}}"],
+							"path": ["api", "token", "revoke"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "4. Protected - Auth Profile",
+			"item": [
+				{
+					"name": "Get Current User (Me)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/me",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "me"]
 						}
 					},
 					"response": []
@@ -210,24 +426,17 @@
 					"name": "Logout",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/auth/logout",
+							"raw": "{{base_url}}/api/auth/logout",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "logout"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Current User",
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/auth/me",
-							"host": ["{{base_url}}"],
-							"path": ["auth", "me"]
+							"path": ["api", "auth", "logout"]
 						}
 					},
 					"response": []
@@ -238,8 +447,14 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -247,48 +462,9 @@
 							"raw": "{\n  \"old_password\": \"admin123\",\n  \"new_password\": \"newpass123\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/auth/change-password",
+							"raw": "{{base_url}}/api/auth/change-password",
 							"host": ["{{base_url}}"],
-							"path": ["auth", "change-password"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Refresh Token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"var jsonData = pm.response.json();",
-									"if (jsonData.data && jsonData.data.access_token) {",
-									"    pm.collectionVariables.set('access_token', jsonData.data.access_token);",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/refresh",
-							"host": ["{{base_url}}"],
-							"path": ["auth", "refresh"]
+							"path": ["api", "auth", "change-password"]
 						}
 					},
 					"response": []
@@ -296,39 +472,23 @@
 			]
 		},
 		{
-			"name": "2. User Management (Admin)",
+			"name": "5. Protected - Admin Users",
 			"item": [
 				{
-					"name": "Create User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"username\": \"newcashier\",\n  \"email\": \"newcashier@pos.local\",\n  \"password\": \"cashier123\",\n  \"full_name\": \"New Cashier User\",\n  \"role\": \"CASHIER\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/admin/users",
-							"host": ["{{base_url}}"],
-							"path": ["admin", "users"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "List All Users",
+					"name": "List Users",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/admin/users?limit=20&offset=0",
+							"raw": "{{base_url}}/api/admin/users?limit=20&offset=0",
 							"host": ["{{base_url}}"],
-							"path": ["admin", "users"],
+							"path": ["api", "admin", "users"],
 							"query": [
 								{
 									"key": "limit",
@@ -359,14 +519,48 @@
 					"response": []
 				},
 				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newcashier\",\n  \"email\": \"newcashier@example.com\",\n  \"password\": \"cashier123\",\n  \"full_name\": \"New Cashier\",\n  \"role\": \"CASHIER\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/admin/users",
+							"host": ["{{base_url}}"],
+							"path": ["api", "admin", "users"]
+						}
+					},
+					"response": []
+				},
+				{
 					"name": "Get User by ID",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"raw": "{{base_url}}/api/admin/users/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["admin", "users", "{{user_id}}"]
+							"path": ["api", "admin", "users", "{{user_id}}"]
 						}
 					},
 					"response": []
@@ -377,18 +571,24 @@
 						"method": "PUT",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"updated@pos.local\",\n  \"full_name\": \"Updated Name\",\n  \"status\": \"ACTIVE\"\n}"
+							"raw": "{\n  \"email\": \"updated@example.com\",\n  \"full_name\": \"Updated Name\",\n  \"status\": \"ACTIVE\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"raw": "{{base_url}}/api/admin/users/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["admin", "users", "{{user_id}}"]
+							"path": ["api", "admin", "users", "{{user_id}}"]
 						}
 					},
 					"response": []
@@ -397,11 +597,17 @@
 					"name": "Delete User",
 					"request": {
 						"method": "DELETE",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/admin/users/{{user_id}}",
+							"raw": "{{base_url}}/api/admin/users/{{user_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["admin", "users", "{{user_id}}"]
+							"path": ["api", "admin", "users", "{{user_id}}"]
 						}
 					},
 					"response": []
@@ -409,17 +615,23 @@
 			]
 		},
 		{
-			"name": "3. Inventory Management",
+			"name": "6. Protected - Inventory",
 			"item": [
 				{
 					"name": "List Inventory",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/inventory?limit=20&offset=0",
+							"raw": "{{base_url}}/api/inventory?limit=20&offset=0",
 							"host": ["{{base_url}}"],
-							"path": ["inventory"],
+							"path": ["api", "inventory"],
 							"query": [
 								{
 									"key": "limit",
@@ -464,18 +676,24 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"sku\": \"PROD-001\",\n  \"name\": \"Laptop ASUS VivoBook\",\n  \"description\": \"Laptop gaming dengan spesifikasi tinggi\",\n  \"quantity\": 50,\n  \"unit\": \"pcs\",\n  \"location\": \"Warehouse A\",\n  \"min_stock\": 10,\n  \"max_stock\": 100,\n  \"price\": 8500000\n}"
+							"raw": "{\n  \"sku\": \"PROD-001\",\n  \"name\": \"Product Name\",\n  \"description\": \"Product description\",\n  \"quantity\": 100,\n  \"unit\": \"pcs\",\n  \"location\": \"Warehouse A\",\n  \"min_stock\": 10,\n  \"max_stock\": 500,\n  \"price\": 50000\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/inventory",
+							"raw": "{{base_url}}/api/inventory",
 							"host": ["{{base_url}}"],
-							"path": ["inventory"]
+							"path": ["api", "inventory"]
 						}
 					},
 					"response": []
@@ -484,11 +702,17 @@
 					"name": "Get Inventory by ID",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"raw": "{{base_url}}/api/inventory/{{inventory_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["inventory", "{{inventory_id}}"]
+							"path": ["api", "inventory", "{{inventory_id}}"]
 						}
 					},
 					"response": []
@@ -499,18 +723,24 @@
 						"method": "PUT",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated description\",\n  \"price\": 9000000\n}"
+							"raw": "{\n  \"name\": \"Updated Product\",\n  \"description\": \"Updated description\",\n  \"price\": 75000\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"raw": "{{base_url}}/api/inventory/{{inventory_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["inventory", "{{inventory_id}}"]
+							"path": ["api", "inventory", "{{inventory_id}}"]
 						}
 					},
 					"response": []
@@ -519,11 +749,17 @@
 					"name": "Delete Inventory",
 					"request": {
 						"method": "DELETE",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/inventory/{{inventory_id}}",
+							"raw": "{{base_url}}/api/inventory/{{inventory_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["inventory", "{{inventory_id}}"]
+							"path": ["api", "inventory", "{{inventory_id}}"]
 						}
 					},
 					"response": []
@@ -534,18 +770,24 @@
 						"method": "PUT",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"quantity\": 75\n}"
+							"raw": "{\n  \"quantity\": 150\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/inventory/{{inventory_id}}/stock",
+							"raw": "{{base_url}}/api/inventory/{{inventory_id}}/stock",
 							"host": ["{{base_url}}"],
-							"path": ["inventory", "{{inventory_id}}", "stock"]
+							"path": ["api", "inventory", "{{inventory_id}}", "stock"]
 						}
 					},
 					"response": []
@@ -556,8 +798,14 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -565,9 +813,9 @@
 							"raw": "{\n  \"amount\": 10\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/inventory/{{inventory_id}}/stock/adjust",
+							"raw": "{{base_url}}/api/inventory/{{inventory_id}}/stock/adjust",
 							"host": ["{{base_url}}"],
-							"path": ["inventory", "{{inventory_id}}", "stock", "adjust"]
+							"path": ["api", "inventory", "{{inventory_id}}", "stock", "adjust"]
 						}
 					},
 					"response": []
@@ -575,7 +823,7 @@
 			]
 		},
 		{
-			"name": "4. POS - Cart",
+			"name": "7. Protected - POS Cart",
 			"item": [
 				{
 					"name": "Create Cart",
@@ -597,18 +845,24 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"customer_name\": \"John Doe\"\n}"
+							"raw": "{\n  \"customer_name\": \"Walk-in Customer\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/pos/cart",
+							"raw": "{{base_url}}/api/pos/cart",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart"]
+							"path": ["api", "pos", "cart"]
 						}
 					},
 					"response": []
@@ -617,11 +871,17 @@
 					"name": "Get My Cart",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/cart/my",
+							"raw": "{{base_url}}/api/pos/cart/my",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "my"]
+							"path": ["api", "pos", "cart", "my"]
 						}
 					},
 					"response": []
@@ -630,11 +890,17 @@
 					"name": "Get Cart by ID",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}"]
+							"path": ["api", "pos", "cart", "{{cart_id}}"]
 						}
 					},
 					"response": []
@@ -645,8 +911,14 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -654,21 +926,27 @@
 							"raw": "{\n  \"product_id\": \"{{inventory_id}}\",\n  \"quantity\": 2\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}/items",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}", "items"]
+							"path": ["api", "pos", "cart", "{{cart_id}}", "items"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "Update Cart Item Quantity",
+					"name": "Update Cart Item",
 					"request": {
 						"method": "PUT",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -676,9 +954,9 @@
 							"raw": "{\n  \"product_id\": \"{{inventory_id}}\",\n  \"quantity\": 5\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}/items",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}", "items"]
+							"path": ["api", "pos", "cart", "{{cart_id}}", "items"]
 						}
 					},
 					"response": []
@@ -689,8 +967,14 @@
 						"method": "DELETE",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -698,9 +982,9 @@
 							"raw": "{\n  \"product_id\": \"{{inventory_id}}\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}/items",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}/items",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}", "items"]
+							"path": ["api", "pos", "cart", "{{cart_id}}", "items"]
 						}
 					},
 					"response": []
@@ -709,11 +993,17 @@
 					"name": "Clear Cart",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}/clear",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}/clear",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}", "clear"]
+							"path": ["api", "pos", "cart", "{{cart_id}}", "clear"]
 						}
 					},
 					"response": []
@@ -722,11 +1012,17 @@
 					"name": "Delete Cart",
 					"request": {
 						"method": "DELETE",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/cart/{{cart_id}}",
+							"raw": "{{base_url}}/api/pos/cart/{{cart_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "cart", "{{cart_id}}"]
+							"path": ["api", "pos", "cart", "{{cart_id}}"]
 						}
 					},
 					"response": []
@@ -734,10 +1030,10 @@
 			]
 		},
 		{
-			"name": "5. POS - Checkout & Transactions",
+			"name": "8. Protected - POS Checkout & Transactions",
 			"item": [
 				{
-					"name": "Checkout (CASH)",
+					"name": "Checkout",
 					"event": [
 						{
 							"listen": "test",
@@ -756,18 +1052,24 @@
 						"method": "POST",
 						"header": [
 							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
 								"key": "Content-Type",
-								"value": "application/json"
+								"value": "application/json",
+								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"payment_method\": \"CASH\",\n  \"payment_amount\": 10000000,\n  \"customer_name\": \"John Doe\",\n  \"notes\": \"Please wrap the gift\"\n}"
+							"raw": "{\n  \"payment_method\": \"CASH\",\n  \"payment_amount\": 200000,\n  \"customer_name\": \"Customer Name\",\n  \"notes\": \"Thank you\"\n}"
 						},
 						"url": {
-							"raw": "{{base_url}}/pos/checkout/{{cart_id}}",
+							"raw": "{{base_url}}/api/pos/checkout/{{cart_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "checkout", "{{cart_id}}"]
+							"path": ["api", "pos", "checkout", "{{cart_id}}"]
 						}
 					},
 					"response": []
@@ -776,11 +1078,17 @@
 					"name": "List Transactions",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/transactions?limit=20&offset=0",
+							"raw": "{{base_url}}/api/pos/transactions?limit=20&offset=0",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "transactions"],
+							"path": ["api", "pos", "transactions"],
 							"query": [
 								{
 									"key": "limit",
@@ -814,11 +1122,17 @@
 					"name": "Get Transaction by ID",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/transactions/{{transaction_id}}",
+							"raw": "{{base_url}}/api/pos/transactions/{{transaction_id}}",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "transactions", "{{transaction_id}}"]
+							"path": ["api", "pos", "transactions", "{{transaction_id}}"]
 						}
 					},
 					"response": []
@@ -827,11 +1141,36 @@
 					"name": "Cancel Transaction",
 					"request": {
 						"method": "POST",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/transactions/{{transaction_id}}/cancel",
+							"raw": "{{base_url}}/api/pos/transactions/{{transaction_id}}/cancel",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "transactions", "{{transaction_id}}", "cancel"]
+							"path": ["api", "pos", "transactions", "{{transaction_id}}", "cancel"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Refund Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/pos/transactions/{{transaction_id}}/refund",
+							"host": ["{{base_url}}"],
+							"path": ["api", "pos", "transactions", "{{transaction_id}}", "refund"]
 						}
 					},
 					"response": []
@@ -840,11 +1179,17 @@
 					"name": "Today's Sales Summary",
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
 						"url": {
-							"raw": "{{base_url}}/pos/sales/today",
+							"raw": "{{base_url}}/api/pos/sales/today",
 							"host": ["{{base_url}}"],
-							"path": ["pos", "sales", "today"]
+							"path": ["api", "pos", "sales", "today"]
 						}
 					},
 					"response": []
@@ -852,36 +1197,553 @@
 			]
 		},
 		{
-			"name": "6. Health & Info",
+			"name": "9. Public - Guest Orders",
 			"item": [
 				{
-					"name": "Health Check",
+					"name": "Create Guest Order",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('guest_order_id', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
-						"auth": {
-							"type": "noauth"
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"table_id\": \"{{table_id}}\",\n  \"customer_name\": \"Guest Customer\",\n  \"customer_phone\": \"08123456789\",\n  \"session_id\": \"session-123\"\n}"
 						},
-						"method": "GET",
-						"header": [],
 						"url": {
-							"raw": "{{base_url}}/health",
+							"raw": "{{base_url}}/api/guest/orders",
 							"host": ["{{base_url}}"],
-							"path": ["health"]
+							"path": ["api", "guest", "orders"]
 						}
 					},
 					"response": []
 				},
 				{
-					"name": "API Info",
+					"name": "Get Guest Order by ID",
 					"request": {
-						"auth": {
-							"type": "noauth"
-						},
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/",
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}",
 							"host": ["{{base_url}}"],
-							"path": [""]
+							"path": ["api", "guest", "orders", "{{guest_order_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Add Item to Guest Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"product_id\": \"{{inventory_id}}\",\n  \"product_name\": \"Product Name\",\n  \"quantity\": 2,\n  \"unit_price\": 50000,\n  \"notes\": \"No ice\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}/items",
+							"host": ["{{base_url}}"],
+							"path": ["api", "guest", "orders", "{{guest_order_id}}", "items"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Guest Order Item",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"quantity\": 3,\n  \"notes\": \"Extra hot\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}/items/{{inventory_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "guest", "orders", "{{guest_order_id}}", "items", "{{inventory_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Item from Guest Order",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}/items/{{inventory_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "guest", "orders", "{{guest_order_id}}", "items", "{{inventory_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Checkout Guest Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"payment_method\": \"QRIS\",\n  \"customer_name\": \"Guest Customer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}/checkout",
+							"host": ["{{base_url}}"],
+							"path": ["api", "guest", "orders", "{{guest_order_id}}", "checkout"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Guest Order",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/guest/orders/{{guest_order_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "guest", "orders", "{{guest_order_id}}", "cancel"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "10. Protected - Orders Management",
+			"item": [
+				{
+					"name": "List Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders/pending",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "pending"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Orders",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders/active",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "active"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Order by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{order_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "{{order_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Orders by Table",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders/table/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "table", "{{table_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"COMPLETED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{order_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "{{order_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Cancel Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/orders/{{order_id}}/cancel",
+							"host": ["{{base_url}}"],
+							"path": ["api", "orders", "{{order_id}}", "cancel"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "11. Protected - Admin Tables",
+			"item": [
+				{
+					"name": "List Tables",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tables?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"disabled": true
+								},
+								{
+									"key": "status",
+									"value": "",
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Tables",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tables/available",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "available"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Create Table",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.id) {",
+									"    pm.collectionVariables.set('table_id', jsonData.data.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"number\": 1,\n  \"location\": \"Main Hall\",\n  \"capacity\": 4,\n  \"description\": \"Near window\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tables",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Table by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tables/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "{{table_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"location\": \"Updated Location\",\n  \"capacity\": 6,\n  \"description\": \"Updated\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tables/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "{{table_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Table",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tables/{{table_id}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "{{table_id}}"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Table Status",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"OCCUPIED\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tables/{{table_id}}/status",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "{{table_id}}", "status"]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Generate QR Code",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/tables/{{table_id}}/qr",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tables", "{{table_id}}", "qr"]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "12. Protected - Admin Reports",
+			"item": [
+				{
+					"name": "Today's Sales Report",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{access_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/reports/sales/today",
+							"host": ["{{base_url}}"],
+							"path": ["api", "reports", "sales", "today"]
 						}
 					},
 					"response": []

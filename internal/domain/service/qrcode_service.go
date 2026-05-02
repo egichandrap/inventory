@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"image"
 	"image/color"
@@ -137,7 +138,7 @@ func (s *QRCodeService) GenerateQRString(tableNumber int, tableID string) (strin
 	}
 
 	// Return as base64 data URL
-	return fmt.Sprintf("data:image/png;base64,%x", bytes), nil
+	return fmt.Sprintf("data:image/png;base64,%s", base64.StdEncoding.EncodeToString(bytes)), nil
 }
 
 // addLogo overlays the logo onto the QR code

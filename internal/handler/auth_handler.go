@@ -11,6 +11,7 @@ import (
 	"github.com/example/jwt-ddd-clean/internal/domain/repository"
 	"github.com/example/jwt-ddd-clean/internal/pkg/errors"
 	"github.com/gorilla/mux"
+	middlewarehttp "github.com/example/jwt-ddd-clean/internal/http/middleware"
 )
 
 // AuthHandler handles authentication HTTP requests
@@ -118,7 +119,11 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 // GetMe returns current user information
 func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 	// Get user ID from context (set by auth middleware)
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middlewarehttp.UserIDKey).(string)
+	if !ok || userID == "" {
+		h.sendError(w, errors.NewUnauthenticatedError("user not found in context"))
+		return
+	}
 
 	response, err := h.authUsecase.GetMe(r.Context(), userID)
 	if err != nil {
@@ -131,7 +136,11 @@ func (h *AuthHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 // ChangePassword handles password change
 func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value("user_id").(string)
+	userID, ok := r.Context().Value(middlewarehttp.UserIDKey).(string)
+	if !ok || userID == "" {
+		h.sendError(w, errors.NewUnauthenticatedError("user not found in context"))
+		return
+	}
 
 	var req dto.ChangePasswordRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

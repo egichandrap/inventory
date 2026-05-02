@@ -74,14 +74,14 @@ func setupRoutes(
 	// Public routes (no authentication required)
 	publicRouter := r.PathPrefix("/api").Subrouter()
 	publicRouter.Use(httpmiddleware.LoginMaxBodyMiddleware())
-	
-	publicRouter.HandleFunc("/api/auth/login", authHandler.Login).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/auth/register", authHandler.Register).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/auth/refresh", authHandler.RefreshToken).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
-	publicRouter.HandleFunc("/api/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
+
+	publicRouter.HandleFunc("/auth/login", authHandler.Login).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/auth/register", authHandler.Register).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/auth/refresh", authHandler.RefreshToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/token/generate", tokenHTTPHandler.GenerateToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/token/refresh", tokenHTTPHandler.RefreshToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/token/validate", tokenHTTPHandler.ValidateToken).Methods(http.MethodPost)
+	publicRouter.HandleFunc("/token/revoke", tokenHTTPHandler.RevokeToken).Methods(http.MethodPost)
 	
 	// Health check routes (no security headers needed)
 	r.HandleFunc("/api/health", healthHandler.HealthCheck).Methods(http.MethodGet)
